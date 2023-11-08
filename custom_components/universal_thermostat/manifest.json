@@ -1,0 +1,10 @@
+{
+  "domain": "universal_thermostat",
+  "name": "Universal Thermostat with auto Heat/Cool modes and PID control support",
+  "version": "v0.1.0",
+  "documentation": "https://github.com/vaproloff/universalThermostat/blob/main/README.md",
+  "dependencies": ["climate", "sensor", "switch", "number", "input_boolean", "input_number"],
+  "requirements": [],
+  "codeowners": ["@vaproloff"],
+  "iot_class": "local_polling"
+}
