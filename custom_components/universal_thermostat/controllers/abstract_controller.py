@@ -1,17 +1,15 @@
 import abc
 import logging
-from datetime import timedelta
-
-from typing import Optional, final, Any
 from collections.abc import Mapping
+from datetime import timedelta
+from typing import Any, Optional, final
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.core import (
     CALLBACK_TYPE,
-    HomeAssistant,
     Context,
-    split_entity_id,
-)
+    HomeAssistant,
+    split_entity_id)
 from homeassistant.helpers.event import async_track_time_interval
 
 from ..const import REASON_KEEP_ALIVE
@@ -108,7 +106,7 @@ class AbstractController(abc.ABC):
         self._hass = hass
 
         if self._keep_alive:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: %s - Setting up keep_alive: %s",
                 self._thermostat_entity_id,
                 self.name,

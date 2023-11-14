@@ -1,35 +1,35 @@
 import logging
 from datetime import timedelta
-
 from typing import Optional
 
+from homeassistant.components.climate import (
+    ATTR_HVAC_ACTION,
+    ATTR_HVAC_MODE,
+    ATTR_MAX_TEMP,
+    ATTR_MIN_TEMP,
+    ATTR_TARGET_TEMP_STEP
+)
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.climate import HVACMode, HVACAction, ATTR_HVAC_ACTION
 from homeassistant.components.climate import (
     SERVICE_SET_HVAC_MODE,
-    ATTR_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
-    ATTR_MIN_TEMP,
-    ATTR_MAX_TEMP,
-    ATTR_TARGET_TEMP_STEP,
+    HVACAction,
+    HVACMode
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    SERVICE_TURN_OFF,
     ATTR_TEMPERATURE,
+    SERVICE_TURN_OFF
 )
-from homeassistant.core import (
-    State,
-)
+from homeassistant.core import State
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import (
-    REASON_THERMOSTAT_STOP,
-    REASON_THERMOSTAT_NOT_RUNNING,
     REASON_KEEP_ALIVE,
+    REASON_THERMOSTAT_NOT_RUNNING,
+    REASON_THERMOSTAT_STOP
 )
-
 from . import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ class ClimatePidController(AbstractPidController):
 
         try:
             output_min = float(output_min)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning Climate entity min_temp",
                 output_min,
@@ -227,7 +227,7 @@ class ClimatePidController(AbstractPidController):
 
         try:
             output_max = float(output_max)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning Climate entity max_temp",
                 output_max,

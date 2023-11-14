@@ -1,8 +1,6 @@
-"""
-PID Controller.
-"""
-import time
+""" PID Controller """
 import logging
+import time
 
 from ..const import DEFAULT_PID_MIN, DEFAULT_PID_MAX
 

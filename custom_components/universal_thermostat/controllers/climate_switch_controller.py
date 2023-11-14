@@ -1,32 +1,32 @@
 import logging
 from datetime import timedelta
-
 from typing import Optional
 
+from homeassistant.components.climate import (
+    ATTR_HVAC_ACTION,
+    ATTR_HVAC_MODE,
+    ATTR_MAX_TEMP,
+    ATTR_MIN_TEMP
+)
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.climate import HVACMode, HVACAction, ATTR_HVAC_ACTION
 from homeassistant.components.climate import (
     SERVICE_SET_HVAC_MODE,
-    ATTR_HVAC_MODE,
-    ATTR_MIN_TEMP,
-    ATTR_MAX_TEMP,
     SERVICE_SET_TEMPERATURE,
+    HVACAction,
+    HVACMode
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    SERVICE_TURN_ON,
-    SERVICE_TURN_OFF,
     ATTR_TEMPERATURE,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON
 )
-from homeassistant.core import (
-    DOMAIN as HA_DOMAIN,
-    State,
-)
+from homeassistant.core import DOMAIN as HA_DOMAIN
+from homeassistant.core import State
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import DEFAULT_CLIMATE_TEMP_DELTA
-
 from . import SwitchController
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class ClimateSwitchController(SwitchController):
 
             try:
                 return float(temp_delta)
-            except ValueError:
+            except ValueError as e:
                 _LOGGER.warning(
                     "Unable to convert template value to float: %s.\nError: %s",
                     self._temp_delta_template,

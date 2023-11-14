@@ -1,15 +1,11 @@
 import abc
 import logging
-from datetime import timedelta
-
-
-from typing import Optional, final, Any
 from collections.abc import Mapping
+from datetime import timedelta
+from typing import Any, Optional, final
 
 from homeassistant.components.climate import HVACMode
-from homeassistant.core import (
-    HomeAssistant,
-)
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.template import RenderInfo, Template
@@ -21,12 +17,11 @@ from ..const import (
     DEFAULT_PID_KD,
     DEFAULT_PID_KI,
     DEFAULT_PID_KP,
-    REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
-    REASON_THERMOSTAT_SENSOR_CHANGED,
     REASON_KEEP_ALIVE,
     REASON_PID_CONTROL,
+    REASON_THERMOSTAT_SENSOR_CHANGED,
+    REASON_THERMOSTAT_TARGET_TEMP_CHANGED
 )
-
 from . import AbstractController
 from .pid_controller import PIDController
 
@@ -155,7 +150,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
         try:
             pid_kp = float(pid_kp)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning default value",
                 pid_kp,
@@ -193,7 +188,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
         try:
             pid_ki = float(pid_ki)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning default value",
                 pid_ki,
@@ -231,7 +226,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
         try:
             pid_kd = float(pid_kd)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning default value",
                 pid_kd,

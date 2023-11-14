@@ -5,20 +5,22 @@ Adds support for universal thermostat units.
 import asyncio
 import logging
 import math
-from typing import Any, Optional
 from collections.abc import Mapping
+from typing import Any, Optional
 
 import voluptuous as vol
 from voluptuous import ALLOW_EXTRA
 
 from homeassistant.components.climate import (
-    DOMAIN as CLIMATE_DOMAIN,
-    ClimateEntity,
-    HVACAction,
-    HVACMode,
-    ClimateEntityFeature,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
+)
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode
 )
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
@@ -30,81 +32,80 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_UNIQUE_ID,
     EVENT_HOMEASSISTANT_START,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
-    PRECISION_TENTHS,
     PRECISION_HALVES,
+    PRECISION_TENTHS,
     PRECISION_WHOLE,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN
 )
 from homeassistant.core import (
-    CoreState,
-    callback,
     Context,
+    CoreState,
     HomeAssistant,
-    split_entity_id,
+    callback,
+    split_entity_id
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
+
 from . import DOMAIN, PLATFORMS
-
-from .controllers import (
-    AbstractController,
-    SwitchController,
-    ClimateSwitchController,
-    PwmSwitchPidController,
-    ClimatePidController,
-    NumberPidController,
-)
-
 from .const import (
-    DEFAULT_CLIMATE_TEMP_DELTA,
-    DEFAULT_HOT_TOLERANCE,
-    DEFAULT_COLD_TOLERANCE,
-    DEFAULT_NAME,
-    DEFAULT_PID_KP,
-    DEFAULT_PID_KI,
-    DEFAULT_PID_KD,
-    DEFAULT_PID_MIN,
-    DEFAULT_PID_MAX,
-    CONF_PID_SWITCH_ENTITY_ID,
-    CONF_PID_SWITCH_INVERTED,
-    CONF_HEATER,
-    CONF_COOLER,
-    CONF_INVERTED,
-    CONF_SENSOR,
-    CONF_MIN_TEMP,
-    CONF_MAX_TEMP,
-    CONF_TARGET_TEMP,
-    CONF_TARGET_TEMP_HIGH,
-    CONF_TARGET_TEMP_LOW,
-    CONF_CLIMATE_TEMP_DELTA,
-    CONF_MIN_DUR,
-    CONF_COLD_TOLERANCE,
-    CONF_HOT_TOLERANCE,
-    CONF_KEEP_ALIVE,
-    CONF_INITIAL_HVAC_MODE,
-    CONF_PRECISION,
-    CONF_TEMP_STEP,
-    CONF_PID_KP,
-    CONF_PID_KI,
-    CONF_PID_KD,
-    CONF_PID_SAMPLE_PERIOD,
-    CONF_PID_MIN,
-    CONF_PID_MAX,
-    CONF_PWM_SWITCH_PERIOD,
+    ATTR_LAST_ACTIVE_HVAC_MODE,
+    ATTR_LAST_ASYNC_CONTROL_HVAC_MODE,
     ATTR_PREV_TARGET,
     ATTR_PREV_TARGET_HIGH,
     ATTR_PREV_TARGET_LOW,
-    ATTR_LAST_ASYNC_CONTROL_HVAC_MODE,
-    ATTR_LAST_ACTIVE_HVAC_MODE,
+    CONF_CLIMATE_TEMP_DELTA,
+    CONF_COLD_TOLERANCE,
+    CONF_COOLER,
+    CONF_HEATER,
+    CONF_HOT_TOLERANCE,
+    CONF_INITIAL_HVAC_MODE,
+    CONF_INVERTED,
+    CONF_KEEP_ALIVE,
+    CONF_MAX_TEMP,
+    CONF_MIN_DUR,
+    CONF_MIN_TEMP,
+    CONF_PID_KD,
+    CONF_PID_KI,
+    CONF_PID_KP,
+    CONF_PID_MAX,
+    CONF_PID_MIN,
+    CONF_PID_SAMPLE_PERIOD,
+    CONF_PID_SWITCH_ENTITY_ID,
+    CONF_PID_SWITCH_INVERTED,
+    CONF_PRECISION,
+    CONF_PWM_SWITCH_PERIOD,
+    CONF_SENSOR,
+    CONF_TARGET_TEMP,
+    CONF_TARGET_TEMP_HIGH,
+    CONF_TARGET_TEMP_LOW,
+    CONF_TEMP_STEP,
+    DEFAULT_CLIMATE_TEMP_DELTA,
+    DEFAULT_COLD_TOLERANCE,
+    DEFAULT_HOT_TOLERANCE,
+    DEFAULT_NAME,
+    DEFAULT_PID_KD,
+    DEFAULT_PID_KI,
+    DEFAULT_PID_KP,
+    DEFAULT_PID_MAX,
+    DEFAULT_PID_MIN,
+    REASON_CONTROL_ENTITY_CHANGED,
     REASON_THERMOSTAT_FIRST_RUN,
     REASON_THERMOSTAT_HVAC_MODE_CHANGED,
-    REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
     REASON_THERMOSTAT_SENSOR_CHANGED,
-    REASON_CONTROL_ENTITY_CHANGED,
+    REASON_THERMOSTAT_TARGET_TEMP_CHANGED
+)
+from .controllers import (
+    AbstractController,
+    ClimatePidController,
+    ClimateSwitchController,
+    NumberPidController,
+    PwmSwitchPidController,
+    SwitchController
 )
 
 SUPPORTED_TARGET_DOMAINS = [
@@ -205,7 +206,7 @@ def _cv_controller_target(cfg: Any) -> Any:
     if domain in [INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN]:
         return CTRL_SCHEMA_PID_NUMBER(cfg)
 
-    raise vol.Invalid(f"{entity_id}:  Unsupported domain: {domain}")
+    raise vol.Invalid(f"{entity_id}: Unsupported domain: {domain}")
 
 
 KEY_SCHEMA = vol.Schema(
@@ -392,18 +393,10 @@ async def async_setup_platform(
     controllers = []
 
     if cooler_config:
-        controllers += _create_controllers(
-            "cooler",
-            HVACMode.COOL,
-            cooler_config,
-        )
+        controllers.extend(_create_controllers("cooler", HVACMode.COOL, cooler_config))
 
     if heater_config:
-        controllers += _create_controllers(
-            "heater",
-            HVACMode.HEAT,
-            heater_config,
-        )
+        controllers.extend(_create_controllers("heater", HVACMode.HEAT, heater_config))
 
     async_add_entities(
         [

@@ -1,37 +1,32 @@
 import logging
 from datetime import timedelta
-
 from typing import Optional
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.components.input_number import (
-    ATTR_MIN,
     ATTR_MAX,
-    SERVICE_SET_VALUE,
-    ATTR_VALUE,
+    ATTR_MIN,
     ATTR_STEP,
+    ATTR_VALUE,
+    SERVICE_SET_VALUE
 )
 from homeassistant.const import (
-    STATE_ON,
-    STATE_OFF,
     ATTR_ENTITY_ID,
-    SERVICE_TURN_ON,
     SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON
 )
-from homeassistant.core import (
-    DOMAIN as HA_DOMAIN,
-    State,
-    split_entity_id,
-)
+from homeassistant.core import DOMAIN as HA_DOMAIN
+from homeassistant.core import State, split_entity_id
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import (
-    REASON_THERMOSTAT_STOP,
-    REASON_THERMOSTAT_NOT_RUNNING,
     REASON_KEEP_ALIVE,
+    REASON_THERMOSTAT_NOT_RUNNING,
+    REASON_THERMOSTAT_STOP
 )
-
 from . import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
@@ -202,7 +197,7 @@ class NumberPidController(AbstractPidController):
 
         try:
             output_min = float(output_min)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning number entity min",
                 output_min,
@@ -242,7 +237,7 @@ class NumberPidController(AbstractPidController):
 
         try:
             output_max = float(output_max)
-        except ValueError:
+        except ValueError as e:
             _LOGGER.warning(
                 "Can't parse float value: %s. Error: %s. Returning number entity max",
                 output_max,

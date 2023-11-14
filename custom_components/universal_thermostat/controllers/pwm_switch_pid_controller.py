@@ -1,38 +1,32 @@
 import logging
-from datetime import timedelta, datetime
-
-
-from typing import Optional, Any
 from collections.abc import Mapping
-from homeassistant.helpers.template import Template
+from datetime import datetime, timedelta
+from typing import Any, Optional
 
-from homeassistant.util import dt as dt_util
 from homeassistant.const import (
-    STATE_ON,
-    STATE_OFF,
     ATTR_ENTITY_ID,
-    SERVICE_TURN_ON,
     SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON
 )
-from homeassistant.core import (
-    DOMAIN as HA_DOMAIN,
-    HomeAssistant,
-    split_entity_id,
-)
+from homeassistant.core import DOMAIN as HA_DOMAIN
+from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.template import Template
+from homeassistant.util import dt as dt_util
 
 from ..const import (
-    REASON_THERMOSTAT_STOP,
-    REASON_THERMOSTAT_NOT_RUNNING,
+    PWM_SWITCH_ATTR_LAST_CONTROL_STATE,
+    PWM_SWITCH_ATTR_LAST_CONTROL_TIME,
+    PWM_SWITCH_ATTR_PWM_VALUE,
+    PWM_SWITCH_MAX_VALUE,
+    PWM_SWITCH_MIN_VALUE,
     REASON_KEEP_ALIVE,
     REASON_PWM_CONTROL,
-    PWM_SWITCH_ATTR_PWM_VALUE,
-    PWM_SWITCH_ATTR_LAST_CONTROL_TIME,
-    PWM_SWITCH_ATTR_LAST_CONTROL_STATE,
-    PWM_SWITCH_MIN_VALUE,
-    PWM_SWITCH_MAX_VALUE,
+    REASON_THERMOSTAT_NOT_RUNNING,
+    REASON_THERMOSTAT_STOP
 )
-
 from . import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
