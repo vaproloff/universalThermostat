@@ -1,5 +1,7 @@
-import logging
+"""Support for simple switch controllers."""
+
 from datetime import timedelta
+import logging
 from typing import Optional
 
 from homeassistant.components.climate import HVACMode
@@ -8,7 +10,7 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
-    STATE_ON
+    STATE_ON,
 )
 from homeassistant.core import DOMAIN as HA_DOMAIN
 from homeassistant.exceptions import ConditionError, TemplateError
@@ -20,7 +22,7 @@ from ..const import (
     DEFAULT_HOT_TOLERANCE,
     REASON_KEEP_ALIVE,
     REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP
+    REASON_THERMOSTAT_STOP,
 )
 from . import AbstractController
 
@@ -28,6 +30,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class SwitchController(AbstractController):
+    """Simple switch controller class."""
+
     def __init__(
         self,
         name: str,
@@ -39,12 +43,14 @@ class SwitchController(AbstractController):
         keep_alive: Optional[timedelta],
         min_cycle_duration,
     ) -> None:
+        """Initialize the controller."""
         super().__init__(name, mode, target_entity_id, inverted, keep_alive)
         self._cold_tolerance_template = cold_tolerance_template
         self._hot_tolerance_template = hot_tolerance_template
         self._min_cycle_duration = min_cycle_duration
 
-    def get_used_template_entity_ids(self) -> [str]:
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
 
         if self._cold_tolerance_template is not None:
@@ -79,7 +85,7 @@ class SwitchController(AbstractController):
 
     @property
     def cold_tolerance(self) -> float:
-        """Returns Cold tolerance"""
+        """Returns Cold tolerance."""
 
         if self._cold_tolerance_template is not None:
             try:
@@ -96,7 +102,7 @@ class SwitchController(AbstractController):
 
             try:
                 return float(cold_tolerance)
-            except ValueError:
+            except ValueError as e:
                 _LOGGER.warning(
                     "Unable to convert template value to float: %s.\nError: %s",
                     self._cold_tolerance_template,
@@ -107,7 +113,7 @@ class SwitchController(AbstractController):
 
     @property
     def hot_tolerance(self) -> float:
-        """Returns Hot tolerance"""
+        """Returns Hot tolerance."""
 
         if self._hot_tolerance_template is not None:
             try:
@@ -124,7 +130,7 @@ class SwitchController(AbstractController):
 
             try:
                 return float(hot_tolerance)
-            except ValueError:
+            except ValueError as e:
                 _LOGGER.warning(
                     "Unable to convert template value to float: %s.\nError: %s",
                     self._hot_tolerance_template,
@@ -237,7 +243,7 @@ class SwitchController(AbstractController):
         )
 
         _LOGGER.debug(
-            f"%s: %s - too_hot: %s, too_cold: %s, need_turn_on: %s, need_turn_off: %s, is on: %s, cur: %s, target: %s, cold_tolerance: %s, hot_tolerance: %s (%s)",
+            "%s: %s - too_hot: %s, too_cold: %s, need_turn_on: %s, need_turn_off: %s, is on: %s, cur: %s, target: %s, cold_tolerance: %s, hot_tolerance: %s (%s)",
             self._thermostat_entity_id,
             self.name,
             too_hot,
@@ -258,8 +264,7 @@ class SwitchController(AbstractController):
             elif reason == REASON_KEEP_ALIVE:
                 # The time argument is passed only in keep-alive case
                 await self._async_turn_on(reason=reason)
-        else:
-            if need_turn_on:
-                await self._async_turn_on(reason=reason)
-            elif reason == REASON_KEEP_ALIVE:
-                await self._async_turn_off(reason=reason)
+        elif need_turn_on:
+            await self._async_turn_on(reason=reason)
+        elif reason == REASON_KEEP_ALIVE:
+            await self._async_turn_off(reason=reason)

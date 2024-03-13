@@ -1,7 +1,9 @@
+"""Abstract class for controller with PID."""
+
 import abc
-import logging
 from collections.abc import Mapping
 from datetime import timedelta
+import logging
 from typing import Any, Optional, final
 
 from homeassistant.components.climate import HVACMode
@@ -20,7 +22,7 @@ from ..const import (
     REASON_KEEP_ALIVE,
     REASON_PID_CONTROL,
     REASON_THERMOSTAT_SENSOR_CHANGED,
-    REASON_THERMOSTAT_TARGET_TEMP_CHANGED
+    REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
 )
 from . import AbstractController
 from .pid_controller import PIDController
@@ -29,6 +31,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class AbstractPidController(AbstractController, abc.ABC):
+    """Abstract class for controller with PID."""
+
     def __init__(
         self,
         name: str,
@@ -41,6 +45,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         inverted: bool,
         keep_alive: Optional[timedelta],
     ) -> None:
+        """Initialize the controller."""
         super().__init__(name, mode, target_entity_id, inverted, keep_alive)
         self._pid_kp_template = pid_kp_template
         self._pid_ki_template = pid_ki_template
@@ -51,7 +56,8 @@ class AbstractPidController(AbstractController, abc.ABC):
         self._last_output_limits: None
         self._last_current_value = None
 
-    def get_used_template_entity_ids(self) -> [str]:
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Get template entitites to track state."""
         tracked_entities = super().get_used_template_entity_ids()
 
         if self._pid_kp_template is not None:
@@ -93,6 +99,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         return tracked_entities
 
     async def async_added_to_hass(self, hass: HomeAssistant, attrs: Mapping[str, Any]):
+        """Add controller when adding thermostat entity."""
         await super().async_added_to_hass(hass, attrs)
 
         if self._pid_sample_period:
@@ -122,6 +129,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
     @property
     def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+        """Return controller's extra attributes for thermostat entity."""
         return {
             CONF_PID_KP: self.pid_kp,
             CONF_PID_KI: self.pid_ki,
@@ -130,7 +138,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
     @property
     def pid_kp(self) -> float:
-        """Returns Proportional Coefficient"""
+        """Returns Proportional Coefficient."""
 
         if self._pid_kp_template is None:
             _LOGGER.warning(
@@ -168,7 +176,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
     @property
     def pid_ki(self) -> float:
-        """Returns Integral Coefficient"""
+        """Returns Integral Coefficient."""
 
         if self._pid_ki_template is None:
             _LOGGER.warning(
@@ -206,7 +214,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
     @property
     def pid_kd(self) -> float:
-        """Returns Derivative Coefficient"""
+        """Returns Derivative Coefficient."""
 
         if self._pid_kd_template is None:
             _LOGGER.warning(
@@ -447,7 +455,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             self._last_output = output
             self._last_current_value = cur_temp
 
-    def __validate_output_limits(self, output_limits: (None, None)) -> bool:
+    def __validate_output_limits(self, output_limits: tuple[None, None]) -> bool:
         min_output, max_output = output_limits
 
         if None in (min_output, max_output):
@@ -469,20 +477,20 @@ class AbstractPidController(AbstractController, abc.ABC):
 
     @abc.abstractmethod
     def _adapt_pid_output(self, value: float) -> float:
-        """Adapt PID output to output limits"""
+        """Adapt PID output to output limits."""
 
     @abc.abstractmethod
     def _round_to_target_precision(self, value: float) -> float:
-        """Round output to target precision"""
+        """Round output to target precision."""
 
     @abc.abstractmethod
     def _get_current_output(self):
-        """Get current output"""
+        """Get current output."""
 
     @abc.abstractmethod
-    def _get_output_limits(self) -> (None, None):
-        """Get output limits (min,max) in controller implementation"""
+    def _get_output_limits(self) -> tuple[None, None]:
+        """Get output limits (min,max) in controller implementation."""
 
     @abc.abstractmethod
     async def _apply_output(self, output: float):
-        """Apply output to target"""
+        """Apply output to target."""

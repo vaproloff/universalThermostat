@@ -1,5 +1,7 @@
-import logging
+"""Support for climate controllers with PID."""
+
 from datetime import timedelta
+import logging
 from typing import Optional
 
 from homeassistant.components.climate import (
@@ -7,20 +9,14 @@ from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_MAX_TEMP,
     ATTR_MIN_TEMP,
-    ATTR_TARGET_TEMP_STEP
-)
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.climate import (
+    ATTR_TARGET_TEMP_STEP,
+    DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACAction,
-    HVACMode
+    HVACMode,
 )
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    ATTR_TEMPERATURE,
-    SERVICE_TURN_OFF
-)
+from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, SERVICE_TURN_OFF
 from homeassistant.core import State
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
@@ -28,7 +24,7 @@ from homeassistant.helpers.template import RenderInfo, Template
 from ..const import (
     REASON_KEEP_ALIVE,
     REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP
+    REASON_THERMOSTAT_STOP,
 )
 from . import AbstractPidController
 
@@ -36,6 +32,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ClimatePidController(AbstractPidController):
+    """PID climate controller class."""
+
     def __init__(
         self,
         name: str,
@@ -50,6 +48,7 @@ class ClimatePidController(AbstractPidController):
         output_min_template: Template,
         output_max_template: Template,
     ) -> None:
+        """Initialize the controller."""
         super().__init__(
             name,
             mode,
@@ -64,7 +63,8 @@ class ClimatePidController(AbstractPidController):
         self._output_min_template = output_min_template
         self._output_max_template = output_max_template
 
-    def get_used_template_entity_ids(self) -> [str]:
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
 
         if self._output_min_template is not None:
@@ -159,7 +159,7 @@ class ClimatePidController(AbstractPidController):
 
     @property
     def _get_default_output_min(self) -> float | None:
-        """Returns Default PID Output minimum value"""
+        """Returns Default PID Output minimum value."""
 
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
@@ -167,7 +167,7 @@ class ClimatePidController(AbstractPidController):
 
     @property
     def output_min(self) -> float | None:
-        """Returns PID Output minimum value"""
+        """Returns PID Output minimum value."""
 
         if self._output_min_template is None:
             _LOGGER.debug(
@@ -199,7 +199,7 @@ class ClimatePidController(AbstractPidController):
 
     @property
     def _get_default_output_max(self) -> float | None:
-        """Returns Default PID Output maximum value"""
+        """Returns Default PID Output maximum value."""
 
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
@@ -207,7 +207,7 @@ class ClimatePidController(AbstractPidController):
 
     @property
     def output_max(self) -> float | None:
-        """Returns PID Output maximum value"""
+        """Returns PID Output maximum value."""
 
         if self._output_max_template is None:
             _LOGGER.debug(
@@ -237,7 +237,7 @@ class ClimatePidController(AbstractPidController):
 
         return min(output_max, self._get_default_output_max)
 
-    def _get_output_limits(self) -> (None, None):
+    def _get_output_limits(self) -> tuple[None, None]:
         if self.mode == HVACMode.COOL:
             return self.output_max, self.output_min
         return self.output_min, self.output_max

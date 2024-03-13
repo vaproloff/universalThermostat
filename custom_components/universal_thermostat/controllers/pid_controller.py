@@ -1,14 +1,15 @@
-""" PID Controller """
+"""PID Controller."""
+
 import logging
 import time
 
-from ..const import DEFAULT_PID_MIN, DEFAULT_PID_MAX
+from ..const import DEFAULT_PID_MAX, DEFAULT_PID_MIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class PIDController:
-    """PID Controller"""
+    """PID Controller."""
 
     def __init__(
         self,
@@ -18,6 +19,7 @@ class PIDController:
         sample_time=None,
         output_limits=(DEFAULT_PID_MIN, DEFAULT_PID_MAX),
     ) -> None:
+        """Initialize the PID controller."""
         self._set_point = 0
         self._output = 0.0
 
@@ -38,7 +40,7 @@ class PIDController:
         self._last_time = None
 
     def update(self, feedback_value, in_time=None):
-        """Calculates PID value for given reference feedback"""
+        """Calculate PID value for given reference feedback."""
 
         current_time = in_time if in_time is not None else self.current_time()
         if self._last_time is None:
@@ -91,7 +93,7 @@ class PIDController:
 
     @property
     def kp(self):
-        """Aggressively the PID reacts to the current error with setting Proportional Gain"""
+        """Aggressively the PID reacts to the current error with setting Proportional Gain."""
         return self._kp
 
     @kp.setter
@@ -100,7 +102,7 @@ class PIDController:
 
     @property
     def ki(self):
-        """Aggressively the PID reacts to the current error with setting Integral Gain"""
+        """Aggressively the PID reacts to the current error with setting Integral Gain."""
         return self._ki
 
     @ki.setter
@@ -109,8 +111,7 @@ class PIDController:
 
     @property
     def kd(self):
-        """Determines how aggressively the PID reacts to the current
-        error with setting Derivative Gain"""
+        """Determines how aggressively the PID reacts to the current error with setting Derivative Gain."""
         return self._kd
 
     @kd.setter
@@ -119,7 +120,7 @@ class PIDController:
 
     @property
     def set_point(self):
-        """The target point to the PID"""
+        """The target point to the PID."""
         return self._set_point
 
     @set_point.setter
@@ -129,6 +130,7 @@ class PIDController:
     @property
     def sample_time(self):
         """PID that should be updated at a regular interval.
+
         Based on a pre-determined sampe time, the PID decides if it should compute or
         return immediately.
         """
@@ -140,17 +142,21 @@ class PIDController:
 
     @property
     def p(self):
+        """Return current Proportional term value."""
         return self._p_term
 
     @property
     def i(self):
+        """Return current Integral term value."""
         return self._i_term
 
     @property
     def d(self):
+        """Return current Derivative term value."""
         return self._d_term
 
     def reset(self):
+        """Reset all PID parameters."""
         self._p_term = 0
         self._i_term = 0
         self._d_term = 0
@@ -161,10 +167,11 @@ class PIDController:
 
     @property
     def output(self):
-        """PID result"""
+        """PID result."""
         return self._output
 
     def current_time(self):
+        """Return time value."""
         try:
             ret_time = time.monotonic()
         except AttributeError:
@@ -173,6 +180,7 @@ class PIDController:
         return ret_time
 
     def clamp_value(self, value, limits):
+        """Clamp value by min and max limits."""
         lower, upper = limits
 
         if value is None:

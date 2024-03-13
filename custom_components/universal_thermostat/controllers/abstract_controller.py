@@ -1,15 +1,13 @@
+"""Abstract controller class."""
+
 import abc
-import logging
 from collections.abc import Mapping
 from datetime import timedelta
+import logging
 from typing import Any, Optional, final
 
 from homeassistant.components.climate import HVACMode
-from homeassistant.core import (
-    CALLBACK_TYPE,
-    Context,
-    HomeAssistant,
-    split_entity_id)
+from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
 
 from ..const import REASON_KEEP_ALIVE
@@ -18,17 +16,19 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class Thermostat(abc.ABC):
+    """Abstract class for universal thermostat entity."""
+
     @abc.abstractmethod
     def get_hvac_mode(self) -> str:
-        """Get thermostat HVAC mode"""
+        """Get thermostat HVAC mode."""
 
     @abc.abstractmethod
     def get_entity_id(self) -> str:
-        """Get Entity name instance"""
+        """Get Entity name instance."""
 
     @abc.abstractmethod
     def get_context(self) -> Context:
-        """Get Context instance"""
+        """Get Context instance."""
 
     @abc.abstractmethod
     def get_target_temperature(self):
@@ -52,13 +52,11 @@ class Thermostat(abc.ABC):
 
     @abc.abstractmethod
     def async_on_remove(self, func: CALLBACK_TYPE) -> None:
-        """Add callback"""
+        """Add callback."""
 
 
 class AbstractController(abc.ABC):
-    """
-    Abstract controller
-    """
+    """Abstract controller."""
 
     def __init__(
         self,
@@ -68,6 +66,7 @@ class AbstractController(abc.ABC):
         inverted: bool,
         keep_alive: Optional[timedelta],
     ) -> None:
+        """Initialize the controller."""
         self._thermostat: Optional[Thermostat] = None
         self.name = name
         self._mode = mode
@@ -81,11 +80,13 @@ class AbstractController(abc.ABC):
             raise ValueError(f"Unsupported mode: '{mode}'")
 
     def set_thermostat(self, thermostat):
+        """Set parent universal thermostat entity."""
         self._thermostat = thermostat
 
     @property
     @final
     def mode(self) -> str:
+        """Return controller HVAC mode."""
         return self._mode
 
     @property
@@ -99,10 +100,11 @@ class AbstractController(abc.ABC):
 
     @property
     def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+        """Return controller's extra attributes for thermostat entity."""
         return None
 
     async def async_added_to_hass(self, hass: HomeAssistant, attrs: Mapping[str, Any]):
-        """Will be called in Entity async_added_to_hass()"""
+        """Add controller when adding thermostat entity."""
         self._hass = hass
 
         if self._keep_alive:
@@ -120,28 +122,31 @@ class AbstractController(abc.ABC):
 
     @property
     def running(self):
+        """If controller is turned on now."""
         return self.__running
 
     @property
     def working(self):
+        """If controller cooling/heating now."""
         return self._is_on()
 
     def get_unique_id(self):
-        """Get unique ID, for attrs storage"""
+        """Get unique ID, for attrs storage."""
         name = "ctrl_" + split_entity_id(self._target_entity_id)[1]
         return name
 
-    def get_target_entity_ids(self) -> [str]:
-        """Get all target entity IDs to subscribe state change on them"""
+    def get_target_entity_ids(self) -> list[str]:
+        """Get all target entity IDs to subscribe state change on them."""
         return [self._target_entity_id]
 
-    def get_used_template_entity_ids(self) -> [str]:
-        """Get all used template entity IDs to subscribe state change on them"""
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Get all used template entity IDs to subscribe state change on them."""
         # return [self._target_entity_id]
         return []
 
     @final
     async def async_start(self):
+        """Turn on the controller."""
         cur_temp = self._thermostat.get_current_temperature()
         target_temp = self._thermostat.get_target_temperature()
         target_temp_low = self._thermostat.get_target_temperature_low()
@@ -181,6 +186,7 @@ class AbstractController(abc.ABC):
 
     @final
     async def async_stop(self):
+        """Turn off the controller."""
         _LOGGER.debug(
             "%s: %s - Stopping controller", self._thermostat_entity_id, self.name
         )
@@ -191,15 +197,15 @@ class AbstractController(abc.ABC):
     async def _async_start(
         self, cur_temp, target_temp, target_temp_low, target_temp_high
     ) -> bool:
-        """Start controller implementation"""
+        """Start controller implementation."""
 
     @abc.abstractmethod
     async def _async_stop(self):
-        """Stop controller implementation"""
+        """Stop controller implementation."""
 
     @final
     async def async_control(self, time=None, force=False, reason=None):
-        """Callback which will be called from Climate Entity"""
+        """Proccess tasks reacting on changes as the thermostat callback."""
 
         cur_temp = self._thermostat.get_current_temperature()
         target_temp = self._thermostat.get_target_temperature()
@@ -242,12 +248,12 @@ class AbstractController(abc.ABC):
         force=False,
         reason=None,
     ):
-        """Control method. Should be overwritten in child classes"""
+        """Control method. Should be overwritten in child classes."""
 
     @abc.abstractmethod
     def _is_on(self):
-        """Is controller entity turned on"""
+        """Is controller entity turned on."""
 
     @abc.abstractmethod
     async def _async_ensure_not_running(self):
-        """Ensure that target is off"""
+        """Ensure that target is off."""

@@ -1,6 +1,8 @@
-import logging
+"""Support for PWM switch controllers with PID."""
+
 from collections.abc import Mapping
 from datetime import datetime, timedelta
+import logging
 from typing import Any, Optional
 
 from homeassistant.const import (
@@ -8,10 +10,9 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
-    STATE_ON
+    STATE_ON,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN
-from homeassistant.core import HomeAssistant, split_entity_id
+from homeassistant.core import DOMAIN as HA_DOMAIN, HomeAssistant, split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.template import Template
 from homeassistant.util import dt as dt_util
@@ -25,7 +26,7 @@ from ..const import (
     REASON_KEEP_ALIVE,
     REASON_PWM_CONTROL,
     REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP
+    REASON_THERMOSTAT_STOP,
 )
 from . import AbstractPidController
 
@@ -33,6 +34,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class PwmSwitchPidController(AbstractPidController):
+    """PID-PWM switch controller class."""
+
     def __init__(
         self,
         name: str,
@@ -46,6 +49,7 @@ class PwmSwitchPidController(AbstractPidController):
         keep_alive: Optional[timedelta],
         pwm_period: timedelta,
     ) -> None:
+        """Initialize the controller."""
         super().__init__(
             name,
             mode,
@@ -71,6 +75,7 @@ class PwmSwitchPidController(AbstractPidController):
         self._last_control_state: Optional[str] = None
 
     async def async_added_to_hass(self, hass: HomeAssistant, attrs: Mapping[str, Any]):
+        """Add controller when adding thermostat entity."""
         await super().async_added_to_hass(hass, attrs)
 
         pwm_value = attrs.get(PWM_SWITCH_ATTR_PWM_VALUE, None)
@@ -106,6 +111,7 @@ class PwmSwitchPidController(AbstractPidController):
 
     @property
     def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+        """Return controller's extra attributes for thermostat entity."""
         attrs = super().extra_state_attributes or {}
 
         if None not in (self._last_control_time, self._last_control_state):
@@ -182,7 +188,7 @@ class PwmSwitchPidController(AbstractPidController):
         # PWM value always int
         return int(value)
 
-    def _get_output_limits(self) -> (None, None):
+    def _get_output_limits(self) -> tuple[None, None]:
         return PWM_SWITCH_MIN_VALUE, PWM_SWITCH_MAX_VALUE
 
     def _get_current_output(self):

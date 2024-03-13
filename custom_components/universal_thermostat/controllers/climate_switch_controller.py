@@ -1,28 +1,27 @@
-import logging
+"""Support for climate switch controllers."""
+
 from datetime import timedelta
+import logging
 from typing import Optional
 
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
     ATTR_MAX_TEMP,
-    ATTR_MIN_TEMP
-)
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.climate import (
+    ATTR_MIN_TEMP,
+    DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACAction,
-    HVACMode
+    HVACMode,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     SERVICE_TURN_OFF,
-    SERVICE_TURN_ON
+    SERVICE_TURN_ON,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN
-from homeassistant.core import State
+from homeassistant.core import DOMAIN as HA_DOMAIN, State
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
@@ -33,6 +32,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ClimateSwitchController(SwitchController):
+    """Climate switch controller class."""
+
     def __init__(
         self,
         name: str,
@@ -45,6 +46,7 @@ class ClimateSwitchController(SwitchController):
         keep_alive: Optional[timedelta],
         min_cycle_duration,
     ) -> None:
+        """Initialize the controller."""
         super().__init__(
             name,
             mode,
@@ -57,7 +59,8 @@ class ClimateSwitchController(SwitchController):
         )
         self._temp_delta_template = temp_delta_template
 
-    def get_used_template_entity_ids(self) -> [str]:
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
 
         if self._temp_delta_template is not None:
@@ -78,7 +81,7 @@ class ClimateSwitchController(SwitchController):
 
     @property
     def temp_delta(self) -> float:
-        """Returns Temperature Delta"""
+        """Returns Temperature Delta."""
 
         if self._temp_delta_template is not None:
             try:
@@ -144,7 +147,9 @@ class ClimateSwitchController(SwitchController):
                 min_target_temp = state.attributes.get(ATTR_MIN_TEMP)
                 max_target_temp = state.attributes.get(ATTR_MAX_TEMP)
                 if None not in (min_target_temp, max_target_temp):
-                    target_temp = min(max(target_temp, min_target_temp), max_target_temp)
+                    target_temp = min(
+                        max(target_temp, min_target_temp), max_target_temp
+                    )
 
             service_data = {
                 ATTR_ENTITY_ID: self._target_entity_id,
@@ -152,7 +157,10 @@ class ClimateSwitchController(SwitchController):
             }
 
             await self._hass.services.async_call(
-                CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, service_data, context=self._context
+                CLIMATE_DOMAIN,
+                SERVICE_SET_TEMPERATURE,
+                service_data,
+                context=self._context,
             )
 
     async def _async_turn_on(self, reason):

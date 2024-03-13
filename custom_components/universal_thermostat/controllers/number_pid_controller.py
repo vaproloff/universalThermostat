@@ -1,5 +1,7 @@
-import logging
+"""Support for switch+number controllers with PID."""
+
 from datetime import timedelta
+import logging
 from typing import Optional
 
 from homeassistant.components.climate import HVACMode
@@ -8,24 +10,23 @@ from homeassistant.components.input_number import (
     ATTR_MIN,
     ATTR_STEP,
     ATTR_VALUE,
-    SERVICE_SET_VALUE
+    SERVICE_SET_VALUE,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
-    STATE_ON
+    STATE_ON,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN
-from homeassistant.core import State, split_entity_id
+from homeassistant.core import DOMAIN as HA_DOMAIN, State, split_entity_id
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import (
     REASON_KEEP_ALIVE,
     REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP
+    REASON_THERMOSTAT_STOP,
 )
 from . import AbstractPidController
 
@@ -33,6 +34,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class NumberPidController(AbstractPidController):
+    """PID Number + Switch controller class."""
+
     def __init__(
         self,
         name: str,
@@ -49,6 +52,7 @@ class NumberPidController(AbstractPidController):
         switch_entity_id: str,
         switch_inverted: bool,
     ) -> None:
+        """Initialize the controller."""
         super().__init__(
             name,
             mode,
@@ -65,12 +69,14 @@ class NumberPidController(AbstractPidController):
         self._switch_entity_id = switch_entity_id
         self._switch_inverted = switch_inverted
 
-    def get_target_entity_ids(self) -> [str]:
+    def get_target_entity_ids(self) -> list[str]:
+        """Add target entities to subscribe state change on them."""
         tracked_entities = super().get_target_entity_ids()
         tracked_entities.append(self._switch_entity_id)
         return tracked_entities
 
-    def get_used_template_entity_ids(self) -> [str]:
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
 
         if self._output_min_template is not None:
@@ -169,7 +175,7 @@ class NumberPidController(AbstractPidController):
 
     @property
     def _get_default_output_min(self) -> float | None:
-        """Returns Default PID Output minimum value"""
+        """Returns Default PID Output minimum value."""
 
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
@@ -177,7 +183,7 @@ class NumberPidController(AbstractPidController):
 
     @property
     def output_min(self) -> float | None:
-        """Returns PID Output minimum value"""
+        """Returns PID Output minimum value."""
 
         if self._output_min_template is None:
             _LOGGER.debug(
@@ -209,7 +215,7 @@ class NumberPidController(AbstractPidController):
 
     @property
     def _get_default_output_max(self) -> float | None:
-        """Returns Default PID Output maximum value"""
+        """Returns Default PID Output maximum value."""
 
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
@@ -217,7 +223,7 @@ class NumberPidController(AbstractPidController):
 
     @property
     def output_max(self) -> float | None:
-        """Returns PID Output maximum value"""
+        """Returns PID Output maximum value."""
 
         if self._output_max_template is None:
             _LOGGER.debug(
@@ -247,7 +253,7 @@ class NumberPidController(AbstractPidController):
 
         return min(output_max, self._get_default_output_max)
 
-    def _get_output_limits(self) -> (None, None):
+    def _get_output_limits(self) -> tuple[None, None]:
         if self.mode == HVACMode.COOL:
             return self.output_max, self.output_min
         return self.output_min, self.output_max

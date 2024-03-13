@@ -1,11 +1,9 @@
-"""
-Adds support for universal thermostat units.
-"""
+"""Adds support for universal thermostat units."""
 
 import asyncio
+from collections.abc import Mapping
 import logging
 import math
-from collections.abc import Mapping
 from typing import Any, Optional
 
 import voluptuous as vol
@@ -14,13 +12,11 @@ from voluptuous import ALLOW_EXTRA
 from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
-)
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.climate import (
+    DOMAIN as CLIMATE_DOMAIN,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
-    HVACMode
+    HVACMode,
 )
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
@@ -36,14 +32,14 @@ from homeassistant.const import (
     PRECISION_TENTHS,
     PRECISION_WHOLE,
     STATE_UNAVAILABLE,
-    STATE_UNKNOWN
+    STATE_UNKNOWN,
 )
 from homeassistant.core import (
     Context,
     CoreState,
     HomeAssistant,
     callback,
-    split_entity_id
+    split_entity_id,
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
@@ -97,7 +93,7 @@ from .const import (
     REASON_THERMOSTAT_FIRST_RUN,
     REASON_THERMOSTAT_HVAC_MODE_CHANGED,
     REASON_THERMOSTAT_SENSOR_CHANGED,
-    REASON_THERMOSTAT_TARGET_TEMP_CHANGED
+    REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
 )
 from .controllers import (
     AbstractController,
@@ -105,7 +101,7 @@ from .controllers import (
     ClimateSwitchController,
     NumberPidController,
     PwmSwitchPidController,
-    SwitchController
+    SwitchController,
 )
 
 SUPPORTED_TARGET_DOMAINS = [
@@ -254,7 +250,7 @@ def _create_controllers(
     prefix: str,
     mode: str,
     conf_list: Any,
-) -> [AbstractController]:
+) -> list[AbstractController]:
     if conf_list is None:
         return []
     if not isinstance(conf_list, list):
@@ -288,7 +284,7 @@ def _create_controllers(
                     conf[CONF_PWM_SWITCH_PERIOD],
                 )
             else:
-                min_duration = conf[CONF_MIN_DUR] if CONF_MIN_DUR in conf else None
+                min_duration = conf.get(CONF_MIN_DUR, None)
                 cold_tolerance = conf[CONF_COLD_TOLERANCE]
                 hot_tolerance = conf[CONF_HOT_TOLERANCE]
 
@@ -319,7 +315,7 @@ def _create_controllers(
                     conf[CONF_PID_MAX],
                 )
             else:
-                min_duration = conf[CONF_MIN_DUR] if CONF_MIN_DUR in conf else None
+                min_duration = conf.get(CONF_MIN_DUR, None)
                 cold_tolerance = conf[CONF_COLD_TOLERANCE]
                 hot_tolerance = conf[CONF_HOT_TOLERANCE]
                 temp_delta = conf[CONF_CLIMATE_TEMP_DELTA]
@@ -355,7 +351,7 @@ def _create_controllers(
 
         else:
             _LOGGER.error(
-                f"Unsupported {name} domain: '{domain}' for entity {entity_id}"
+                "Unsupported %s domain: '%s' for entity %s", name, domain, entity_id
             )
 
         if controller:
@@ -367,7 +363,7 @@ def _create_controllers(
 async def async_setup_platform(
     hass: HomeAssistant, config, async_add_entities, discovery_info=None
 ):
-    """Set up the smart thermostat platform."""
+    """Set up the universal thermostat platform."""
 
     # prevent unused variable warn
     _ = discovery_info
@@ -459,6 +455,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._unit = unit
         self._unique_id = unique_id
         self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
+        self._support_flags |= ClimateEntityFeature.TURN_OFF
+        self._support_flags |= ClimateEntityFeature.TURN_ON
+        self._enable_turn_on_off_backwards_compatibility = False
         self._hvac_action = HVACAction.IDLE
 
         for controller in self._controllers:
@@ -477,6 +476,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         if HVACMode.COOL in self._hvac_list and HVACMode.HEAT in self._hvac_list:
             self._hvac_list.append(HVACMode.HEAT_COOL)
             self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+            self._support_flags |= ClimateEntityFeature.TURN_OFF
+            self._support_flags |= ClimateEntityFeature.TURN_ON
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -517,7 +518,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             )
 
         async def _async_first_run():
-            """Will called one time. Need on hot reload when HA core is running"""
+            """Will called one time. Need on hot reload when HA core is running."""
             await self._async_control(reason=REASON_THERMOSTAT_FIRST_RUN)
             self.async_write_ha_state()
 
@@ -588,6 +589,14 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 and old_state.state in self._hvac_list
             ):
                 self._hvac_mode = old_state.state
+                if (
+                    self._hvac_mode in (HVACMode.HEAT, HVACMode.COOL)
+                    and self._support_flags
+                    & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+                ):
+                    self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
+                    self._support_flags |= ClimateEntityFeature.TURN_OFF
+                    self._support_flags |= ClimateEntityFeature.TURN_ON
 
             self._last_async_control_hvac_mode = old_state.attributes.get(
                 ATTR_LAST_ASYNC_CONTROL_HVAC_MODE
@@ -616,27 +625,35 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             self._last_active_hvac_mode = None
 
     def get_hass(self) -> HomeAssistant:
+        """Return Hass object."""
         return self.hass
 
     def get_entity_id(self) -> str:
+        """Return universal thermostat entity_id."""
         return self.entity_id
 
     def get_context(self) -> Context:
+        """Return context."""
         return self._context
 
     def get_hvac_mode(self):
+        """Return current HVAC mode."""
         return self.hvac_mode
 
     def get_target_temperature(self):
+        """Return current target temperature."""
         return self.target_temperature
 
     def get_target_temperature_low(self):
+        """Return current target temperature for  heating in a Heat/Cool mode."""
         return self.target_temperature_low
 
     def get_target_temperature_high(self):
+        """Return current target temperature for  cooling in a Heat/Cool mode."""
         return self.target_temperature_high
 
     def get_current_temperature(self):
+        """Return current temperature from target sensor."""
         return self.current_temperature
 
     def _get_default_target_temp(self):
@@ -730,6 +747,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     @property
     def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+        """Provides extra attributes."""
         attrs = {}
         for controller in self._controllers:
             extra_controller_attrs = controller.extra_state_attributes
@@ -767,11 +785,15 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             and self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE
         ):
             self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+            self._support_flags |= ClimateEntityFeature.TURN_OFF
+            self._support_flags |= ClimateEntityFeature.TURN_ON
         elif (
             self._hvac_mode in (HVACMode.HEAT, HVACMode.COOL)
             and self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         ):
             self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
+            self._support_flags |= ClimateEntityFeature.TURN_OFF
+            self._support_flags |= ClimateEntityFeature.TURN_ON
 
         await self._async_control(
             force=True, reason=REASON_THERMOSTAT_HVAC_MODE_CHANGED
@@ -834,6 +856,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def _async_controller_target_entities_changed(self, event):
         """Handle controller target entities changes."""
         _ = event
+        await self._async_control(reason=REASON_CONTROL_ENTITY_CHANGED)
         self.async_write_ha_state()
 
     async def _async_controller_template_entities_changed(self, event):
@@ -859,7 +882,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.error("%s: Unable to update from sensor: %s", self.name, ex)
 
     async def _async_control(self, time=None, force=False, reason=None):
-        """Call controllers"""
+        """Call controllers."""
         async with self._temp_lock:
             if self._last_async_control_hvac_mode != self._hvac_mode:
                 _LOGGER.debug(
@@ -869,8 +892,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     self._hvac_mode,
                 )
 
-                if self._hvac_mode != HVACMode.OFF:
-                    self._last_active_hvac_mode = self._hvac_mode
+                # if self._hvac_mode != HVACMode.OFF:
+                #     self._last_active_hvac_mode = self._hvac_mode
             elif self._hvac_mode == HVACMode.OFF:
                 # Skip control, last `OFF` was already processed
                 return
