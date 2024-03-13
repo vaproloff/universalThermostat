@@ -209,4 +209,4 @@ class ClimateSwitchController(SwitchController):
         if hvac_action is not None:
             return hvac_action not in (HVACAction.IDLE, HVACAction.OFF, None)
         else:
-            return state == self.mode
+            return state.state == self.mode
