@@ -205,8 +205,9 @@ class ClimateSwitchController(SwitchController):
         state: State = self._hass.states.get(self._target_entity_id)
         if not state:
             return False
+
         hvac_action = state.attributes.get(ATTR_HVAC_ACTION)
         if hvac_action is not None:
             return hvac_action not in (HVACAction.IDLE, HVACAction.OFF, None)
-        else:
-            return state.state == self.mode
+
+        return state.state == self.mode

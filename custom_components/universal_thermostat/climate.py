@@ -712,6 +712,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     @property
     def hvac_action(self):
         """Return the current running hvac operation if supported."""
+        if self._hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
 
         action = HVACAction.IDLE
 
