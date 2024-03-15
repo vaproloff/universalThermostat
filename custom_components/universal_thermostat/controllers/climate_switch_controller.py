@@ -41,7 +41,7 @@ class ClimateSwitchController(SwitchController):
         target_entity_id: str,
         cold_tolerance_template: Template,
         hot_tolerance_template: Template,
-        temp_delta_template: Template,
+        temp_delta_template: Optional[Template],
         inverted: bool,
         keep_alive: Optional[timedelta],
         min_cycle_duration,
@@ -80,7 +80,7 @@ class ClimateSwitchController(SwitchController):
         return tracked_entities
 
     @property
-    def temp_delta(self) -> float:
+    def temp_delta(self) -> float | None:
         """Returns Temperature Delta."""
 
         if self._temp_delta_template is not None:
@@ -103,8 +103,6 @@ class ClimateSwitchController(SwitchController):
                     e,
                 )
 
-        return float(DEFAULT_CLIMATE_TEMP_DELTA)
-
     async def _async_control(
         self,
         cur_temp,
@@ -125,7 +123,7 @@ class ClimateSwitchController(SwitchController):
             reason,
         )
 
-        if self._is_on():
+        if self._is_on() and self.temp_delta is not None:
             if (
                 self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
                 and self._mode == HVACMode.COOL

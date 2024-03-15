@@ -81,7 +81,6 @@ from .const import (
     CONF_TARGET_TEMP_HIGH,
     CONF_TARGET_TEMP_LOW,
     CONF_TEMP_STEP,
-    DEFAULT_CLIMATE_TEMP_DELTA,
     DEFAULT_COLD_TOLERANCE,
     DEFAULT_HOT_TOLERANCE,
     DEFAULT_NAME,
@@ -136,9 +135,7 @@ CTRL_SCHEMA_SWITCH = CTRL_SCHEMA_COMMON.extend(
 
 CTRL_SCHEMA_CLIMATE_SWITCH = CTRL_SCHEMA_SWITCH.extend(
     {
-        vol.Optional(
-            CONF_CLIMATE_TEMP_DELTA, default=DEFAULT_CLIMATE_TEMP_DELTA
-        ): cv.template,
+        vol.Optional(CONF_CLIMATE_TEMP_DELTA, default=None): vol.Any(None, cv.template),
     }
 )
 
