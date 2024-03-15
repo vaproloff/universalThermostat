@@ -456,7 +456,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._target_temp_low = target_temp_low
         self._unit = unit
         self._unique_id = unique_id
-        self._enable_turn_on_off_backwards_compatibility = False
         self._hvac_action = HVACAction.IDLE
 
         for controller in self._controllers:

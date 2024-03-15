@@ -28,7 +28,6 @@ Compared with it, I've added some functionality for my needs, namely:
 * Adjustable delays for turning heater/cooler on/off.
 * Support preset modes.
 * Support templates for `pwm_period`
-* `target_temp_delta` could be not specified - target climate entity set point should not be adjusted.
 
 ## Installation (via HACS)
 
@@ -74,6 +73,7 @@ climate:
     target_temp: 24.5
     target_temp_low: 24
     target_temp_high: 25
+    heat_cool_disabled: false
     initial_hvac_mode: heat_cool
     heater:
       - entity_id: climate.kitchen_heating_floor_thermostat
@@ -123,6 +123,7 @@ climate:
 * `target_temp` _(Optional)_ - Initial target temperature.
 * `target_temp_low` _(Optional)_ - Initial target low temperature (for `heat_cool` mode).
 * `target_temp_high` _(Optional)_ - Initial target high temperature (for `heat_cool` mode).
+* `heat_cool_disabled` _(Optional)_ - Disables `heat_cool` mode. Default: false.
 * `initial_hvac_mode` _(Optional)_ - Initial HVAC mode.
 * `precision` _(Optional)_ - Precision for this device. Supported values are 0.1, 0.5 and 1.0. Default: 0.1 for Celsius and 1.0 for Fahrenheit.
 * `target_temp_step` _(Optional)_ - Temperature set point step. Supported values are 0.1, 0.5 and 1.0. Default: equals to `precision`.
@@ -224,13 +225,13 @@ Domains: `climate`
 * `min_cycle_duration` _(Optional, default=null)_ - Minimal cycle duration. Used to protect from on/off cycling.
 * `cold_tolerance` _(Optional, default=0.3)_ - Cold tolerance. Could be a template.
 * `hot_tolerance` _(Optional, default=0.3)_ - Hot tolerance. Could be a template.
-* `target_temp_delta` _(Optional, default=0)_ - Delta between Thermostat set point and target climate entity. Could be a template.
+* `target_temp_delta` _(Optional, default=None)_ - Delta between Thermostat set point and target climate entity. Could be a template. If not mentioned - temperature control will be disabled.
 
 #### Behavior
 
 * Climate `entity_id` will be turned on when controller is active.
 * Climate `entity_id` will be turned off when controller is not active.
-* Climate `entity_id` temperature set point will be adjusted taking `target_temp_delta` into account if specified:
+* Climate `entity_id` temperature set point will be adjusted taking `target_temp_delta` into account if it specified:
   * Thermostat set point + `target_temp_delta` - for heaters;
   * Thermostat set point - `target_temp_delta` - for coolers;
 

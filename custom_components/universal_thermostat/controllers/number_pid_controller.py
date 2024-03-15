@@ -253,7 +253,7 @@ class NumberPidController(AbstractPidController):
 
         return min(output_max, self._get_default_output_max)
 
-    def _get_output_limits(self) -> tuple[None, None]:
+    def _get_output_limits(self) -> tuple[float | None, float | None]:
         if self.mode == HVACMode.COOL:
             return self.output_max, self.output_min
         return self.output_min, self.output_max
