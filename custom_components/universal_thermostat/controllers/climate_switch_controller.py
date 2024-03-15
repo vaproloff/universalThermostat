@@ -5,14 +5,12 @@ import logging
 from typing import Optional
 
 from homeassistant.components.climate import (
-    ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
     ATTR_MAX_TEMP,
     ATTR_MIN_TEMP,
     DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
-    HVACAction,
     HVACMode,
 )
 from homeassistant.const import (
@@ -204,8 +202,4 @@ class ClimateSwitchController(SwitchController):
         if not state:
             return False
 
-        hvac_action = state.attributes.get(ATTR_HVAC_ACTION)
-        if hvac_action is not None:
-            return hvac_action not in (HVACAction.IDLE, HVACAction.OFF, None)
-
-        return state.state == self.mode
+        return state.state == self._mode
