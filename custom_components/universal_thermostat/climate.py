@@ -57,6 +57,7 @@ from .const import (
     CONF_CLIMATE_TEMP_DELTA,
     CONF_COLD_TOLERANCE,
     CONF_COOLER,
+    CONF_HEAT_COOL_DISABLED,
     CONF_HEATER,
     CONF_HOT_TOLERANCE,
     CONF_INITIAL_HVAC_MODE,
@@ -231,6 +232,7 @@ DATA_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_LOW): vol.Coerce(float),
+        vol.Optional(CONF_HEAT_COOL_DISABLED, default=False): vol.Coerce(bool),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
             [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
         ),
@@ -377,6 +379,7 @@ async def async_setup_platform(
     target_temp = config.get(CONF_TARGET_TEMP)
     target_temp_high = config.get(CONF_TARGET_TEMP_HIGH)
     target_temp_low = config.get(CONF_TARGET_TEMP_LOW)
+    heat_cool_disabled = config.get(CONF_HEAT_COOL_DISABLED)
     initial_hvac_mode = config.get(CONF_INITIAL_HVAC_MODE)
     precision = config.get(CONF_PRECISION)
     target_temp_step = config.get(CONF_TEMP_STEP)
@@ -405,6 +408,7 @@ async def async_setup_platform(
                 target_temp,
                 target_temp_high,
                 target_temp_low,
+                heat_cool_disabled,
                 initial_hvac_mode,
                 precision,
                 target_temp_step,
@@ -428,6 +432,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         target_temp,
         target_temp_high,
         target_temp_low,
+        heat_cool_disabled,
         initial_hvac_mode,
         precision,
         target_temp_step,
@@ -454,9 +459,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._target_temp_low = target_temp_low
         self._unit = unit
         self._unique_id = unique_id
-        self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
-        self._support_flags |= ClimateEntityFeature.TURN_OFF
-        self._support_flags |= ClimateEntityFeature.TURN_ON
         self._enable_turn_on_off_backwards_compatibility = False
         self._hvac_action = HVACAction.IDLE
 
@@ -473,11 +475,12 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             ):
                 self._hvac_list.append(HVACMode.COOL)
 
-        if HVACMode.COOL in self._hvac_list and HVACMode.HEAT in self._hvac_list:
+        if (
+            HVACMode.COOL in self._hvac_list and HVACMode.HEAT in self._hvac_list
+        ) and not heat_cool_disabled:
             self._hvac_list.append(HVACMode.HEAT_COOL)
-            self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-            self._support_flags |= ClimateEntityFeature.TURN_OFF
-            self._support_flags |= ClimateEntityFeature.TURN_ON
+
+        self._set_support_flags()
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -589,14 +592,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 and old_state.state in self._hvac_list
             ):
                 self._hvac_mode = old_state.state
-                if (
-                    self._hvac_mode in (HVACMode.HEAT, HVACMode.COOL)
-                    and self._support_flags
-                    & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-                ):
-                    self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
-                    self._support_flags |= ClimateEntityFeature.TURN_OFF
-                    self._support_flags |= ClimateEntityFeature.TURN_ON
+                self._set_support_flags()
 
             self._last_async_control_hvac_mode = old_state.attributes.get(
                 ATTR_LAST_ASYNC_CONTROL_HVAC_MODE
@@ -781,21 +777,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         self._hvac_mode = hvac_mode
-
-        if (
-            self._hvac_mode == HVACMode.HEAT_COOL
-            and self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE
-        ):
-            self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-            self._support_flags |= ClimateEntityFeature.TURN_OFF
-            self._support_flags |= ClimateEntityFeature.TURN_ON
-        elif (
-            self._hvac_mode in (HVACMode.HEAT, HVACMode.COOL)
-            and self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-        ):
-            self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
-            self._support_flags |= ClimateEntityFeature.TURN_OFF
-            self._support_flags |= ClimateEntityFeature.TURN_ON
+        self._set_support_flags()
 
         await self._async_control(
             force=True, reason=REASON_THERMOSTAT_HVAC_MODE_CHANGED
@@ -894,8 +876,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     self._hvac_mode,
                 )
 
-                # if self._hvac_mode != HVACMode.OFF:
-                #     self._last_active_hvac_mode = self._hvac_mode
+                if self._hvac_mode != HVACMode.OFF:
+                    self._last_active_hvac_mode = self._hvac_mode
             elif self._hvac_mode == HVACMode.OFF:
                 # Skip control, last `OFF` was already processed
                 return
@@ -936,6 +918,19 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 await controller.async_control(time=time, force=force, reason=reason)
 
             self._last_async_control_hvac_mode = self._hvac_mode
+
+    def _set_support_flags(self) -> None:
+        """Set support flags based on configuration."""
+        if (
+            self._hvac_mode == HVACMode.OFF
+            and self._last_active_hvac_mode == HVACMode.HEAT_COOL
+        ) or self._hvac_mode == HVACMode.HEAT_COOL:
+            self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        else:
+            self._support_flags = ClimateEntityFeature.TARGET_TEMPERATURE
+
+        self._support_flags |= ClimateEntityFeature.TURN_OFF
+        self._support_flags |= ClimateEntityFeature.TURN_ON
 
     @property
     def supported_features(self):

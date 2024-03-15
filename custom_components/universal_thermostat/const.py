@@ -1,3 +1,5 @@
+"""Constant variables used by integration."""
+
 DEFAULT_NAME = "Universal Thermostat"
 DEFAULT_HOT_TOLERANCE = 0.3
 DEFAULT_COLD_TOLERANCE = 0.3
@@ -16,6 +18,7 @@ CONF_MAX_TEMP = "max_temp"
 CONF_TARGET_TEMP = "target_temp"
 CONF_TARGET_TEMP_HIGH = "target_temp_high"
 CONF_TARGET_TEMP_LOW = "target_temp_low"
+CONF_HEAT_COOL_DISABLED = "heat_cool_disabled"
 CONF_MIN_DUR = "min_cycle_duration"
 CONF_COLD_TOLERANCE = "cold_tolerance"
 CONF_HOT_TOLERANCE = "hot_tolerance"
@@ -34,7 +37,7 @@ CONF_PWM_SWITCH_PERIOD = "pwm_period"
 CONF_PID_SWITCH_ENTITY_ID = "switch_entity_id"
 CONF_PID_SWITCH_INVERTED = "switch_inverted"
 ATTR_LAST_ASYNC_CONTROL_HVAC_MODE = "async_control_hvac_mode"
-ATTR_LAST_ACTIVE_HVAC_MODE = "last_mode"
+ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_PREV_TARGET = "prev_target_temp"
 ATTR_PREV_TARGET_LOW = "prev_target_temp_low"
 ATTR_PREV_TARGET_HIGH = "prev_target_temp_high"
