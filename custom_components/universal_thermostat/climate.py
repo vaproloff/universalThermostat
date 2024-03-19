@@ -772,7 +772,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.error("%s: Unrecognized hvac mode: %s", self.name, hvac_mode)
             return
 
-        if hvac_mode != self._hvac_mode:
+        if HVACMode.HEAT_COOL in self._hvac_list and hvac_mode != self._hvac_mode:
             if (
                 hvac_mode == HVACMode.COOL
                 and self._target_temp != self._target_temp_high
@@ -804,10 +804,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             if temperature is None:
                 return
             self._target_temp = temperature
-            if self._hvac_mode == HVACMode.HEAT:
-                self._target_temp_low = temperature
-            if self._hvac_mode == HVACMode.COOL:
-                self._target_temp_high = temperature
+            if HVACMode.HEAT_COOL in self._hvac_list:
+                if self._hvac_mode == HVACMode.HEAT:
+                    self._target_temp_low = temperature
+                if self._hvac_mode == HVACMode.COOL:
+                    self._target_temp_high = temperature
 
         elif self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE:
             if None in (temp_low, temp_high):
