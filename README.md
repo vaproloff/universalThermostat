@@ -1,6 +1,6 @@
 # Universal Thermostat Integration for Home Assistant
 
-This integration is a fork of [Smart Thermostat] from [hacker-cb], who did the great job 
+Integration based on [Smart Thermostat] custom component from [hacker-cb], who did the great job 
 I am extremely appreciated for!
 Compared with it, I've added some functionality for my needs, namely:
 * `heat_cool` mode now uses two target temperatures - `target_temp_low` and `target_temp_high`;
@@ -27,7 +27,8 @@ Compared with it, I've added some functionality for my needs, namely:
 
 * Adjustable delays for turning heater/cooler on/off.
 * Support preset modes.
-* Support templates for `pwm_period`
+* Support templates for `pwm_period`.
+* Add AUTO hvac mode with heating and cooling deltas.
 
 ## Installation (via HACS)
 
