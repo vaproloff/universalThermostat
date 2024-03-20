@@ -272,8 +272,6 @@ class NumberPidController(AbstractPidController):
         self,
         cur_temp,
         target_temp,
-        target_temp_low,
-        target_temp_high,
         time=None,
         force=False,
         reason=None,
@@ -283,8 +281,6 @@ class NumberPidController(AbstractPidController):
         await super()._async_control(
             cur_temp,
             target_temp,
-            target_temp_low,
-            target_temp_high,
             time,
             force,
             reason,

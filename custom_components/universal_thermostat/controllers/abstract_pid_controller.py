@@ -250,9 +250,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
         return pid_kd
 
-    async def _async_start(
-        self, cur_temp, target_temp, target_temp_low, target_temp_high
-    ) -> bool:
+    async def _async_start(self, cur_temp, target_temp) -> bool:
         return self._setup_pid(cur_temp)
 
     async def _async_stop(self):
@@ -305,8 +303,6 @@ class AbstractPidController(AbstractController, abc.ABC):
         self,
         cur_temp,
         target_temp,
-        target_temp_low,
-        target_temp_high,
         time=None,
         force=False,
         reason=None,
@@ -350,17 +346,6 @@ class AbstractPidController(AbstractController, abc.ABC):
             )
             self._pid.kd = kd_new
             self._pid.reset()
-
-        if (
-            self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
-            and self._mode == HVACMode.COOL
-        ):
-            target_temp = target_temp_high
-        elif (
-            self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
-            and self._mode == HVACMode.HEAT
-        ):
-            target_temp = target_temp_low
 
         if self._pid.set_point != target_temp:
             _LOGGER.debug(

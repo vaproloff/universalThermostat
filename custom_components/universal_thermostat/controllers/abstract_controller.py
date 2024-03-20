@@ -31,16 +31,8 @@ class Thermostat(abc.ABC):
         """Get Context instance."""
 
     @abc.abstractmethod
-    def get_target_temperature(self):
-        """Return the target temperature."""
-
-    @abc.abstractmethod
-    def get_target_temperature_low(self):
-        """Return the target temperature low."""
-
-    @abc.abstractmethod
-    def get_target_temperature_high(self):
-        """Return the target temperature high."""
+    def get_ctrl_target_temperature(self, ctrl_hvac_mode):
+        """Return controller's target temperature."""
 
     @abc.abstractmethod
     def get_current_temperature(self):
@@ -148,9 +140,7 @@ class AbstractController(abc.ABC):
     async def async_start(self):
         """Turn on the controller."""
         cur_temp = self._thermostat.get_current_temperature()
-        target_temp = self._thermostat.get_target_temperature()
-        target_temp_low = self._thermostat.get_target_temperature_low()
-        target_temp_high = self._thermostat.get_target_temperature_high()
+        target_temp = self._thermostat.get_ctrl_target_temperature(self._mode)
 
         _LOGGER.debug(
             "%s: %s - Trying to start controller, cur: %s, target: %s ",
@@ -160,28 +150,22 @@ class AbstractController(abc.ABC):
             target_temp,
         )
 
-        if await self._async_start(
-            cur_temp, target_temp, target_temp_low, target_temp_high
-        ):
+        if await self._async_start(cur_temp, target_temp):
             self.__running = True
             _LOGGER.debug(
-                "%s: %s - Started controller, cur: %s, target: %s, target_low: %s, target_high: %s",
+                "%s: %s - Started controller, cur: %s, target: %s",
                 self._thermostat_entity_id,
                 self.name,
                 cur_temp,
                 target_temp,
-                target_temp_low,
-                target_temp_high,
             )
         else:
             _LOGGER.error(
-                "%s: %s - Error starting controller, cur: %s, target: %s, target_low: %s, target_high: %s",
+                "%s: %s - Error starting controller, cur: %s, target: %s",
                 self._thermostat_entity_id,
                 self.name,
                 cur_temp,
                 target_temp,
-                target_temp_low,
-                target_temp_high,
             )
 
     @final
@@ -194,9 +178,7 @@ class AbstractController(abc.ABC):
         self.__running = False
 
     @abc.abstractmethod
-    async def _async_start(
-        self, cur_temp, target_temp, target_temp_low, target_temp_high
-    ) -> bool:
+    async def _async_start(self, cur_temp, target_temp) -> bool:
         """Start controller implementation."""
 
     @abc.abstractmethod
@@ -208,9 +190,7 @@ class AbstractController(abc.ABC):
         """Proccess tasks reacting on changes as the thermostat callback."""
 
         cur_temp = self._thermostat.get_current_temperature()
-        target_temp = self._thermostat.get_target_temperature()
-        target_temp_low = self._thermostat.get_target_temperature_low()
-        target_temp_high = self._thermostat.get_target_temperature_high()
+        target_temp = self._thermostat.get_ctrl_target_temperature(self._mode)
 
         # _LOGGER.debug("%s: %s - Control: cur: %s, target: %s, force: %s, time: %s, (%s)",
         #               self._thermostat_entity_id, self.name,
@@ -226,8 +206,6 @@ class AbstractController(abc.ABC):
             await self._async_control(
                 cur_temp,
                 target_temp,
-                target_temp_low,
-                target_temp_high,
                 time=time,
                 force=force,
                 reason=reason,
@@ -242,8 +220,6 @@ class AbstractController(abc.ABC):
         self,
         cur_temp,
         target_temp,
-        target_temp_low,
-        target_temp_high,
         time=None,
         force=False,
         reason=None,

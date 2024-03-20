@@ -105,8 +105,6 @@ class ClimateSwitchController(SwitchController):
         self,
         cur_temp,
         target_temp,
-        target_temp_low,
-        target_temp_high,
         time=None,
         force=False,
         reason=None,
@@ -114,25 +112,12 @@ class ClimateSwitchController(SwitchController):
         await super()._async_control(
             cur_temp,
             target_temp,
-            target_temp_low,
-            target_temp_high,
             time,
             force,
             reason,
         )
 
         if self._is_on() and self.temp_delta is not None:
-            if (
-                self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
-                and self._mode == HVACMode.COOL
-            ):
-                target_temp = target_temp_high
-            elif (
-                self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
-                and self._mode == HVACMode.HEAT
-            ):
-                target_temp = target_temp_low
-
             if self.mode == HVACMode.COOL:
                 target_temp -= self.temp_delta
             else:

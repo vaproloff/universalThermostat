@@ -54,6 +54,8 @@ from .const import (
     ATTR_PREV_TARGET,
     ATTR_PREV_TARGET_HIGH,
     ATTR_PREV_TARGET_LOW,
+    CONF_AUTO_COOL_DELTA,
+    CONF_AUTO_HEAT_DELTA,
     CONF_CLIMATE_TEMP_DELTA,
     CONF_COLD_TOLERANCE,
     CONF_COOLER,
@@ -81,6 +83,8 @@ from .const import (
     CONF_TARGET_TEMP_HIGH,
     CONF_TARGET_TEMP_LOW,
     CONF_TEMP_STEP,
+    DEFAULT_AUTO_COOL_DELTA,
+    DEFAULT_AUTO_HEAT_DELTA,
     DEFAULT_COLD_TOLERANCE,
     DEFAULT_HOT_TOLERANCE,
     DEFAULT_NAME,
@@ -229,6 +233,12 @@ DATA_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_LOW): vol.Coerce(float),
+        vol.Optional(CONF_AUTO_COOL_DELTA, default=DEFAULT_AUTO_COOL_DELTA): vol.Coerce(
+            float
+        ),
+        vol.Optional(CONF_AUTO_HEAT_DELTA, default=DEFAULT_AUTO_HEAT_DELTA): vol.Coerce(
+            float
+        ),
         vol.Optional(CONF_HEAT_COOL_DISABLED, default=False): vol.Coerce(bool),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
             [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
@@ -394,6 +404,11 @@ async def async_setup_platform(
     if heater_config:
         controllers.extend(_create_controllers("heater", HVACMode.HEAT, heater_config))
 
+    auto_cool_delta, auto_heat_delta = None, None
+    if heater_config and cooler_config:
+        auto_cool_delta = config.get(CONF_AUTO_COOL_DELTA)
+        auto_heat_delta = config.get(CONF_AUTO_HEAT_DELTA)
+
     async_add_entities(
         [
             UniversalThermostat(
@@ -405,6 +420,8 @@ async def async_setup_platform(
                 target_temp,
                 target_temp_high,
                 target_temp_low,
+                auto_cool_delta,
+                auto_heat_delta,
                 heat_cool_disabled,
                 initial_hvac_mode,
                 precision,
@@ -429,6 +446,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         target_temp,
         target_temp_high,
         target_temp_low,
+        auto_cool_delta,
+        auto_heat_delta,
         heat_cool_disabled,
         initial_hvac_mode,
         precision,
@@ -454,6 +473,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._target_temp = target_temp
         self._target_temp_high = target_temp_high
         self._target_temp_low = target_temp_low
+        self._auto_cool_delta = auto_cool_delta
+        self._auto_heat_delta = auto_heat_delta
         self._unit = unit
         self._unique_id = unique_id
         self._hvac_action = HVACAction.IDLE
@@ -471,10 +492,10 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             ):
                 self._hvac_list.append(HVACMode.COOL)
 
-        if (
-            HVACMode.COOL in self._hvac_list and HVACMode.HEAT in self._hvac_list
-        ) and not heat_cool_disabled:
-            self._hvac_list.append(HVACMode.HEAT_COOL)
+        if HVACMode.COOL in self._hvac_list and HVACMode.HEAT in self._hvac_list:
+            self._hvac_list.append(HVACMode.AUTO)
+            if not heat_cool_disabled:
+                self._hvac_list.append(HVACMode.HEAT_COOL)
 
         self._set_support_flags()
 
@@ -632,17 +653,20 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         """Return current HVAC mode."""
         return self.hvac_mode
 
-    def get_target_temperature(self):
-        """Return current target temperature."""
-        return self.target_temperature
-
-    def get_target_temperature_low(self):
-        """Return current target temperature for  heating in a Heat/Cool mode."""
-        return self.target_temperature_low
-
-    def get_target_temperature_high(self):
-        """Return current target temperature for  cooling in a Heat/Cool mode."""
-        return self.target_temperature_high
+    def get_ctrl_target_temperature(self, ctrl_hvac_mode):
+        """Return target temperature for controller."""
+        if self._hvac_mode == HVACMode.HEAT_COOL:
+            if ctrl_hvac_mode == HVACMode.HEAT:
+                return self._target_temp_low
+            if ctrl_hvac_mode == HVACMode.COOL:
+                return self._target_temp_high
+        elif self._hvac_mode == HVACMode.AUTO:
+            if ctrl_hvac_mode == HVACMode.HEAT:
+                return self._target_temp - self._auto_heat_delta
+            if ctrl_hvac_mode == HVACMode.COOL:
+                return self._target_temp + self._auto_cool_delta
+        else:
+            return self._target_temp
 
     def get_current_temperature(self):
         """Return current temperature from target sensor."""
@@ -901,9 +925,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
                 if controller.running:
                     if (
-                        self._hvac_mode not in (HVACMode.COOL, HVACMode.HEAT_COOL)
+                        self._hvac_mode
+                        not in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
                         and controller.mode == HVACMode.COOL
-                        or self._hvac_mode not in (HVACMode.HEAT, HVACMode.HEAT_COOL)
+                        or self._hvac_mode
+                        not in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
                         and controller.mode == HVACMode.HEAT
                     ):
                         _LOGGER.debug(
@@ -916,9 +942,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                         continue
 
                 if not controller.running and (
-                    self._hvac_mode in (HVACMode.COOL, HVACMode.HEAT_COOL)
+                    self._hvac_mode
+                    in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
                     and controller.mode == HVACMode.COOL
-                    or self._hvac_mode in (HVACMode.HEAT, HVACMode.HEAT_COOL)
+                    or self._hvac_mode
+                    in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
                     and controller.mode == HVACMode.HEAT
                 ):
                     _LOGGER.debug(
