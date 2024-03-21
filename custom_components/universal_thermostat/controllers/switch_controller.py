@@ -178,9 +178,7 @@ class SwitchController(AbstractController):
             self._target_entity_id, STATE_ON if not self._inverted else STATE_OFF
         )
 
-    async def _async_start(
-        self, cur_temp, target_temp, target_temp_low, target_temp_high
-    ) -> bool:
+    async def _async_start(self, cur_temp, target_temp) -> bool:
         return True
 
     async def _async_stop(self):
@@ -194,8 +192,6 @@ class SwitchController(AbstractController):
         self,
         cur_temp,
         target_temp,
-        target_temp_low,
-        target_temp_high,
         time=None,
         force=False,
         reason=None,
@@ -219,17 +215,6 @@ class SwitchController(AbstractController):
 
             if not long_enough:
                 return
-
-        if (
-            self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
-            and self._mode == HVACMode.COOL
-        ):
-            target_temp = target_temp_high
-        elif (
-            self._thermostat.get_hvac_mode() == HVACMode.HEAT_COOL
-            and self._mode == HVACMode.HEAT
-        ):
-            target_temp = target_temp_low
 
         too_cold = cur_temp <= target_temp - self.cold_tolerance
         too_hot = cur_temp >= target_temp + self.hot_tolerance

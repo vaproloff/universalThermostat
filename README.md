@@ -1,10 +1,11 @@
-# Universal Thermostat Integration for Home Assistant
+# Universal Thermostat component for Home Assistant
 
 Integration based on [Smart Thermostat] custom component from [hacker-cb], who did the great job 
 I am extremely appreciated for!
 Compared with it, I've added some functionality for my needs, namely:
 * `heat_cool` mode now uses two target temperatures - `target_temp_low` and `target_temp_high`;
 * in `heat_cool` mode coolers and heaters both continue working according to their target set points;
+* added `auto` mode with common target temperatures and heating/cooling deltas - for those who prefer one temperature setting or who has compatibility issues with two targets;
 * `climate` domain controllers can now also work in simple toggling mode like `switch` without PID;
 * PID controller is now local module, not using any dependencies, with other - more classic behaviour;
 * Thermostat now restores its state when using `climate.turn_on` service;
@@ -19,16 +20,9 @@ Compared with it, I've added some functionality for my needs, namely:
 
 ### Current features:
 
-* Support multiply heaters/coolers.
-* Supports `heat_cool` mode.
+* Support multiple heaters/coolers.
+* Supports `heat_cool` and `auto` modes.
 * Supports invert logic of the heater/cooler.
-
-### Future TODOs:
-
-* Adjustable delays for turning heater/cooler on/off.
-* Support preset modes.
-* Support templates for `pwm_period`.
-* Add AUTO hvac mode with heating and cooling deltas.
 
 ## Installation (via HACS)
 
@@ -74,6 +68,8 @@ climate:
     target_temp: 24.5
     target_temp_low: 24
     target_temp_high: 25
+    auto_cool_delta: "{{ states('input_number.auto_cool_delta') | float }}"
+    auto_heat_delta: 1.0
     heat_cool_disabled: false
     initial_hvac_mode: heat_cool
     heater:
@@ -124,6 +120,8 @@ climate:
 * `target_temp` _(Optional)_ - Initial target temperature.
 * `target_temp_low` _(Optional)_ - Initial target low temperature (for `heat_cool` mode).
 * `target_temp_high` _(Optional)_ - Initial target high temperature (for `heat_cool` mode).
+* `auto_cool_delta` _(Optional)_ - Target temperature delta for Coolers in `auto` mode. Could be a template. Default: 1.0.
+* `auto_heat_delta` _(Optional)_ - Target temperature delta for Heaters in `auto` mode. Could be a template. Default: 1.0.
 * `heat_cool_disabled` _(Optional)_ - Disables `heat_cool` mode. Default: false.
 * `initial_hvac_mode` _(Optional)_ - Initial HVAC mode.
 * `precision` _(Optional)_ - Precision for this device. Supported values are 0.1, 0.5 and 1.0. Default: 0.1 for Celsius and 1.0 for Fahrenheit.
@@ -158,6 +156,15 @@ _NOTE: available if at least one `CONFIG.heater` and at least one `CONFIG.cooler
 * Specific behavior of each **heater** and **cooler** will depend on the controller type.
 * All **cooler** controllers will pick `target_temp_high` as their `target_temp`.
 * All **heater** controllers will pick `target_temp_low` as their `target_temp`.
+
+### HVAC_MODE = `auto` 
+
+_NOTE: available if at least one `CONFIG.heater` and at least one `CONFIG.cooler` were defined._
+
+* All **cooler** and **heater** controllers will be turned on.
+* Specific behavior of each **heater** and **cooler** will depend on the controller type.
+* All **cooler** controllers will pick `target_temp + auto_cool_delta` as their `target_temp`.
+* All **heater** controllers will pick `target_temp - auto_heat_delta` as their `target_temp`.
 
 _NOTE: turning on controller **DOES NOT MEANS** turning on `CONFIG.CONTROLLER.enitity_id` inside controller. 
 Controller behavior depends on the **specific controller logic** and described below for each controller._
@@ -283,7 +290,11 @@ Domains: `number`,`input_number`
 * `pid_params` will be inverted if `inverted` was set to `true`
 * `switch_entity_id` behavior will be inverted if `switch_inverted` was set to `true`
 
+## Future TODOs:
 
+* Adjustable delays for turning heater/cooler on/off.
+* Add support for preset modes.
+* Add support templates for `pwm_period`.
 
 ## Reporting an Issue
 
@@ -304,5 +315,4 @@ logger:
 
 [Smart Thermostat]: https://github.com/hacker-cb/hassio-component-smart-thermostat
 [hacker-cb]: https://github.com/hacker-cb
-[generic_thermostat]: https://www.home-assistant.io/integrations/generic_thermostat/
 [hacs]: https://hacs.xyz
