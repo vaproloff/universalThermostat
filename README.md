@@ -68,7 +68,7 @@ climate:
     target_temp: 24.5
     target_temp_low: 24
     target_temp_high: 25
-    auto_cool_delta: 0.5
+    auto_cool_delta: "{{ states('input_number.auto_cool_delta') | float }}"
     auto_heat_delta: 1.0
     heat_cool_disabled: false
     initial_hvac_mode: heat_cool
@@ -120,8 +120,8 @@ climate:
 * `target_temp` _(Optional)_ - Initial target temperature.
 * `target_temp_low` _(Optional)_ - Initial target low temperature (for `heat_cool` mode).
 * `target_temp_high` _(Optional)_ - Initial target high temperature (for `heat_cool` mode).
-* `auto_cool_delta` _(Optional)_ - Target temperature delta for Coolers in `auto` mode. Default: 1.0.
-* `auto_heat_delta` _(Optional)_ - Target temperature delta for Heaters in `auto` mode. Default: 1.0.
+* `auto_cool_delta` _(Optional)_ - Target temperature delta for Coolers in `auto` mode. Could be a template. Default: 1.0.
+* `auto_heat_delta` _(Optional)_ - Target temperature delta for Heaters in `auto` mode. Could be a template. Default: 1.0.
 * `heat_cool_disabled` _(Optional)_ - Disables `heat_cool` mode. Default: false.
 * `initial_hvac_mode` _(Optional)_ - Initial HVAC mode.
 * `precision` _(Optional)_ - Precision for this device. Supported values are 0.1, 0.5 and 1.0. Default: 0.1 for Celsius and 1.0 for Fahrenheit.
