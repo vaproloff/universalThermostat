@@ -133,7 +133,6 @@ class AbstractController(abc.ABC):
 
     def get_used_template_entity_ids(self) -> list[str]:
         """Get all used template entity IDs to subscribe state change on them."""
-        # return [self._target_entity_id]
         return []
 
     @final

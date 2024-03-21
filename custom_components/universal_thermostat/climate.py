@@ -41,11 +41,13 @@ from homeassistant.core import (
     callback,
     split_entity_id,
 )
+from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.template import RenderInfo
 
 from . import DOMAIN, PLATFORMS
 from .const import (
@@ -93,6 +95,7 @@ from .const import (
     DEFAULT_PID_KP,
     DEFAULT_PID_MAX,
     DEFAULT_PID_MIN,
+    REASON_AUTO_COOL_DELTAS_CHANGED,
     REASON_CONTROL_ENTITY_CHANGED,
     REASON_THERMOSTAT_FIRST_RUN,
     REASON_THERMOSTAT_HVAC_MODE_CHANGED,
@@ -233,12 +236,12 @@ DATA_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_LOW): vol.Coerce(float),
-        vol.Optional(CONF_AUTO_COOL_DELTA, default=DEFAULT_AUTO_COOL_DELTA): vol.Coerce(
-            float
-        ),
-        vol.Optional(CONF_AUTO_HEAT_DELTA, default=DEFAULT_AUTO_HEAT_DELTA): vol.Coerce(
-            float
-        ),
+        vol.Optional(
+            CONF_AUTO_COOL_DELTA, default=DEFAULT_AUTO_COOL_DELTA
+        ): cv.template,
+        vol.Optional(
+            CONF_AUTO_HEAT_DELTA, default=DEFAULT_AUTO_HEAT_DELTA
+        ): cv.template,
         vol.Optional(CONF_HEAT_COOL_DISABLED, default=False): vol.Coerce(bool),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
             [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
@@ -473,8 +476,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._target_temp = target_temp
         self._target_temp_high = target_temp_high
         self._target_temp_low = target_temp_low
-        self._auto_cool_delta = auto_cool_delta
-        self._auto_heat_delta = auto_heat_delta
+        self._auto_cool_delta_template = auto_cool_delta
+        self._auto_heat_delta_template = auto_heat_delta
         self._unit = unit
         self._unique_id = unique_id
         self._hvac_action = HVACAction.IDLE
@@ -509,6 +512,15 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 self.hass, [self.sensor_entity_id], self._async_sensor_changed
             )
         )
+
+        if HVACMode.AUTO in self._hvac_list:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass,
+                    self.get_used_template_entity_ids(),
+                    self._async_auto_mode_deltas_changed,
+                )
+            )
 
         old_state = await self.async_get_last_state()
 
@@ -681,6 +693,40 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     def _get_default_target_temp_high(self):
         return self.max_temp
 
+    def get_used_template_entity_ids(self) -> list[str]:
+        """Add used template entities to track state change."""
+        tracked_entities = []
+
+        if self._auto_cool_delta_template is not None:
+            try:
+                template_info: RenderInfo = (
+                    self._auto_cool_delta_template.async_render_to_info()
+                )
+            except (TemplateError, TypeError) as e:
+                _LOGGER.warning(
+                    "Unable to get template info: %s.\nError: %s",
+                    self._auto_cool_delta_template,
+                    e,
+                )
+            else:
+                tracked_entities.extend(template_info.entities)
+
+        if self._auto_heat_delta_template is not None:
+            try:
+                template_info: RenderInfo = (
+                    self._auto_heat_delta_template.async_render_to_info()
+                )
+            except (TemplateError, TypeError) as e:
+                _LOGGER.warning(
+                    "Unable to get template info: %s.\nError: %s",
+                    self._auto_heat_delta_template,
+                    e,
+                )
+            else:
+                tracked_entities.extend(template_info.entities)
+
+        return tracked_entities
+
     @property
     def should_poll(self):
         """Return the polling state."""
@@ -782,6 +828,56 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             attrs[ATTR_PREV_TARGET_HIGH] = self._target_temp_high
 
         return attrs
+
+    @property
+    def _auto_cool_delta(self) -> float | None:
+        """Returns Temperature Delta for coolers in Auto mode."""
+        if self._auto_cool_delta_template is not None:
+            try:
+                auto_cool_delta = self._auto_cool_delta_template.async_render(
+                    parse_result=False
+                )
+            except (TemplateError, TypeError) as e:
+                _LOGGER.warning(
+                    "Unable to render template value: %s.\nError: %s",
+                    self._auto_cool_delta_template,
+                    e,
+                )
+                return float(DEFAULT_AUTO_COOL_DELTA)
+
+            try:
+                return float(auto_cool_delta)
+            except ValueError as e:
+                _LOGGER.warning(
+                    "Unable to convert template value to float: %s.\nError: %s",
+                    self._auto_cool_delta_template,
+                    e,
+                )
+
+    @property
+    def _auto_heat_delta(self) -> float | None:
+        """Returns Temperature Delta for heaters in Auto mode."""
+        if self._auto_heat_delta_template is not None:
+            try:
+                auto_heat_delta = self._auto_heat_delta_template.async_render(
+                    parse_result=False
+                )
+            except (TemplateError, TypeError) as e:
+                _LOGGER.warning(
+                    "Unable to render template value: %s.\nError: %s",
+                    self._auto_heat_delta_template,
+                    e,
+                )
+                return float(DEFAULT_AUTO_HEAT_DELTA)
+
+            try:
+                return float(auto_heat_delta)
+            except ValueError as e:
+                _LOGGER.warning(
+                    "Unable to convert template value to float: %s.\nError: %s",
+                    self._auto_cool_delta_template,
+                    e,
+                )
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
@@ -885,6 +981,12 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         """Handle controller template entities changes."""
         _ = event
         await self._async_control(reason=REASON_CONTROL_ENTITY_CHANGED)
+        self.async_write_ha_state()
+
+    async def _async_auto_mode_deltas_changed(self, event):
+        """Handle Auto Mode deltas changes."""
+        _ = event
+        await self._async_control(reason=REASON_AUTO_COOL_DELTAS_CHANGED)
         self.async_write_ha_state()
 
     @callback
