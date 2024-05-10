@@ -2,7 +2,6 @@
 
 from datetime import timedelta
 import logging
-from typing import Optional
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
@@ -39,9 +38,9 @@ class ClimateSwitchController(SwitchController):
         target_entity_id: str,
         cold_tolerance_template: Template,
         hot_tolerance_template: Template,
-        temp_delta_template: Optional[Template],
+        temp_delta_template: Template | None,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
         min_cycle_duration,
     ) -> None:
         """Initialize the controller."""

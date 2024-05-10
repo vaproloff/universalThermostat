@@ -2,7 +2,6 @@
 
 from datetime import timedelta
 import logging
-from typing import Optional
 
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
@@ -44,7 +43,7 @@ class ClimatePidController(AbstractPidController):
         pid_kd_template: Template,
         pid_sample_period: timedelta,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
         output_min_template: Template,
         output_max_template: Template,
     ) -> None:

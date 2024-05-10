@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Mapping
 import logging
 import math
-from typing import Any, Optional
+from typing import Any
 
 import voluptuous as vol
 from voluptuous import ALLOW_EXTRA
@@ -501,6 +501,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 self._hvac_list.append(HVACMode.HEAT_COOL)
 
         self._set_support_flags()
+        self._enable_turn_on_off_backwards_compatibility = (
+            False  # To be removed after deprecation period
+        )
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -810,7 +813,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         return self._hvac_list
 
     @property
-    def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Provides extra attributes."""
         attrs = {}
         for controller in self._controllers:

@@ -4,7 +4,7 @@ import abc
 from collections.abc import Mapping
 from datetime import timedelta
 import logging
-from typing import Any, Optional, final
+from typing import Any, final
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.core import HomeAssistant
@@ -41,9 +41,9 @@ class AbstractPidController(AbstractController, abc.ABC):
         pid_kp_template: Template,
         pid_ki_template: Template,
         pid_kd_template: Template,
-        pid_sample_period: Optional[timedelta],
+        pid_sample_period: timedelta | None,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
     ) -> None:
         """Initialize the controller."""
         super().__init__(name, mode, target_entity_id, inverted, keep_alive)
@@ -51,8 +51,8 @@ class AbstractPidController(AbstractController, abc.ABC):
         self._pid_ki_template = pid_ki_template
         self._pid_kd_template = pid_kd_template
         self._pid_sample_period = pid_sample_period
-        self._pid: Optional[PIDController] = None
-        self._last_output: Optional[float] = None
+        self._pid: PIDController | None = None
+        self._last_output: float | None = None
         self._last_output_limits: None
         self._last_current_value = None
 
@@ -128,7 +128,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         await self.async_control(time=time, reason=REASON_PID_CONTROL)
 
     @property
-    def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return controller's extra attributes for thermostat entity."""
         return {
             CONF_PID_KP: self.pid_kp,
