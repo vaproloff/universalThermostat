@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -46,7 +46,7 @@ class PwmSwitchPidController(AbstractPidController):
         pid_kd_template: Template,
         pid_sample_period: timedelta,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
         pwm_period: timedelta,
     ) -> None:
         """Initialize the controller."""
@@ -62,7 +62,7 @@ class PwmSwitchPidController(AbstractPidController):
             keep_alive,
         )
         self._pwm_period = pwm_period
-        self._pwm_value: Optional[int] = None
+        self._pwm_value: int | None = None
         target_entity_name = split_entity_id(target_entity_id)[1]
         self._pwm_value_attr_name = target_entity_name + PWM_SWITCH_ATTR_PWM_VALUE
 
@@ -71,8 +71,8 @@ class PwmSwitchPidController(AbstractPidController):
         if self._pwm_control_period < timedelta(seconds=1):
             self._pwm_control_period = timedelta(seconds=1)
 
-        self._last_control_time: Optional[datetime] = None
-        self._last_control_state: Optional[str] = None
+        self._last_control_time: datetime | None = None
+        self._last_control_state: str | None = None
 
     async def async_added_to_hass(self, hass: HomeAssistant, attrs: Mapping[str, Any]):
         """Add controller when adding thermostat entity."""
@@ -110,7 +110,7 @@ class PwmSwitchPidController(AbstractPidController):
         )
 
     @property
-    def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return controller's extra attributes for thermostat entity."""
         attrs = super().extra_state_attributes or {}
 

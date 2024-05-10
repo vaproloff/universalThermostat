@@ -4,7 +4,7 @@ import abc
 from collections.abc import Mapping
 from datetime import timedelta
 import logging
-from typing import Any, Optional, final
+from typing import Any, final
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, split_entity_id
@@ -56,17 +56,17 @@ class AbstractController(abc.ABC):
         mode: str,
         target_entity_id: str,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
     ) -> None:
         """Initialize the controller."""
-        self._thermostat: Optional[Thermostat] = None
+        self._thermostat: Thermostat | None = None
         self.name = name
         self._mode = mode
         self._target_entity_id = target_entity_id
         self._inverted = inverted
         self._keep_alive = keep_alive
         self.__running = False
-        self._hass: Optional[HomeAssistant] = None
+        self._hass: HomeAssistant | None = None
 
         if mode not in [HVACMode.COOL, HVACMode.HEAT]:
             raise ValueError(f"Unsupported mode: '{mode}'")
@@ -91,7 +91,7 @@ class AbstractController(abc.ABC):
         return self._thermostat.get_entity_id()
 
     @property
-    def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return controller's extra attributes for thermostat entity."""
         return None
 
@@ -124,8 +124,7 @@ class AbstractController(abc.ABC):
 
     def get_unique_id(self):
         """Get unique ID, for attrs storage."""
-        name = "ctrl_" + split_entity_id(self._target_entity_id)[1]
-        return name
+        return "ctrl_" + split_entity_id(self._target_entity_id)[1]
 
     def get_target_entity_ids(self) -> list[str]:
         """Get all target entity IDs to subscribe state change on them."""
@@ -201,7 +200,7 @@ class AbstractController(abc.ABC):
 
         if not self.__running:
             await self._async_ensure_not_running()
-        else:
+        elif None not in (cur_temp, target_temp):
             await self._async_control(
                 cur_temp,
                 target_temp,

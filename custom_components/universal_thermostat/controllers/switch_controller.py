@@ -2,7 +2,6 @@
 
 from datetime import timedelta
 import logging
-from typing import Optional
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.const import (
@@ -40,7 +39,7 @@ class SwitchController(AbstractController):
         cold_tolerance_template: Template,
         hot_tolerance_template: Template,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
         min_cycle_duration,
     ) -> None:
         """Initialize the controller."""
@@ -215,6 +214,13 @@ class SwitchController(AbstractController):
 
             if not long_enough:
                 return
+
+        _LOGGER.info(
+            "CurTemp: %s. Target temp: %s, Tolerance: %s",
+            cur_temp,
+            target_temp,
+            self.cold_tolerance,
+        )
 
         too_cold = cur_temp <= target_temp - self.cold_tolerance
         too_hot = cur_temp >= target_temp + self.hot_tolerance

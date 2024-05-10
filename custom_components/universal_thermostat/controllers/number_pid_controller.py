@@ -2,7 +2,6 @@
 
 from datetime import timedelta
 import logging
-from typing import Optional
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.components.input_number import (
@@ -46,7 +45,7 @@ class NumberPidController(AbstractPidController):
         pid_kd_template: Template,
         pid_sample_period: timedelta,
         inverted: bool,
-        keep_alive: Optional[timedelta],
+        keep_alive: timedelta | None,
         output_min_template: Template,
         output_max_template: Template,
         switch_entity_id: str,
