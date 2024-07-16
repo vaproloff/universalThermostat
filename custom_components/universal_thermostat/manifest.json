@@ -1,11 +1,20 @@
 {
   "domain": "universal_thermostat",
-  "name": "Universal Thermostat with multiple entities to control, Heat/Cool mode and PID support",
-  "codeowners": ["@vaproloff"],
-  "dependencies": ["climate", "sensor", "switch", "number", "input_boolean", "input_number"],
+  "name": "Universal Thermostat with multiple entities to control, Heat/Cool mode, PID support, smart preset modes",
+  "codeowners": [
+    "@vaproloff"
+  ],
+  "dependencies": [
+    "climate",
+    "sensor",
+    "switch",
+    "number",
+    "input_boolean",
+    "input_number"
+  ],
   "documentation": "https://github.com/vaproloff/universalThermostat/",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/vaproloff/universalThermostat/issues",
   "requirements": [],
-  "version": "v0.1.3"
+  "version": "2024.7.0"
 }

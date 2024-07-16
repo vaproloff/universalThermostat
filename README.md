@@ -11,6 +11,7 @@ Compared with it, I've added some functionality for my needs, namely:
 * Thermostat now restores its state when using `climate.turn_on` service;
 * PID parameters, tolerances, limits can now be templates, with values changing tracking without restarting;
 * controllers target entities state changing not causes control immediately, they will be updated after target sensor state change;
+* presets were reinvented, their support was enhanced.
 
 ### Supported domains and modes for heaters and coolers:
 
@@ -23,6 +24,7 @@ Compared with it, I've added some functionality for my needs, namely:
 * Support multiple heaters/coolers.
 * Supports `heat_cool` and `auto` modes.
 * Supports invert logic of the heater/cooler.
+* Supports presets.
 
 ## Installation (via HACS)
 
@@ -98,6 +100,16 @@ climate:
         cold_tolerance: 0.3
         hot_tolerance: 0.3
         target_temp_delta: 1.0
+    presets:
+      sleep:
+        temp_delta: -0.5
+      away:
+        heat_delta: -1.0
+        cool_delta: 2.0
+      eco:
+        target_temp: 18.0
+        heat_target_temp: 18.0
+        cool_target_temp: 29.0
 ```
 
 ## Glossary
@@ -126,6 +138,7 @@ climate:
 * `initial_hvac_mode` _(Optional)_ - Initial HVAC mode.
 * `precision` _(Optional)_ - Precision for this device. Supported values are 0.1, 0.5 and 1.0. Default: 0.1 for Celsius and 1.0 for Fahrenheit.
 * `target_temp_step` _(Optional)_ - Temperature set point step. Supported values are 0.1, 0.5 and 1.0. Default: equals to `precision`.
+* `presets` _(Optional)_ - Map of presets.
 
 _NOTE: at least one of `heater` or `cooler` is required._
 
