@@ -1070,10 +1070,10 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             match self._last_active_hvac_mode:
                 case HVACMode.COOL:
                     self._target_temp_high = self._target_temp
-                    self._target_temp_low = self._target_temp - 1.0
+                    self._target_temp_low = self._target_temp - self._auto_heat_delta
                 case HVACMode.HEAT:
                     self._target_temp_low = self._target_temp
-                    self._target_temp_high = self._target_temp + 1.0
+                    self._target_temp_high = self._target_temp + self._auto_cool_delta
                 case HVACMode.AUTO:
                     self._target_temp_low = self._target_temp - self._auto_heat_delta
                     self._target_temp_high = self._target_temp + self._auto_cool_delta
