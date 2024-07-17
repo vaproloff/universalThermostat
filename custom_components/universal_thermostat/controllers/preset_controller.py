@@ -300,6 +300,7 @@ class PresetController:
                     self._saved_hvac_mode,
                 )
                 self._thermostat.hvac_mode = self._saved_hvac_mode
+                self._thermostat.toggle_target_temps(self._thermostat.hvac_mode)
 
             if (
                 self._saved_target_temp
@@ -351,6 +352,7 @@ class PresetController:
                     new_hvac_mode,
                 )
                 self._thermostat.hvac_mode = new_hvac_mode
+                self._thermostat.toggle_target_temps(new_hvac_mode)
                 self._thermostat.set_support_flags()
 
             if (

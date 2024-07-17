@@ -49,6 +49,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.temperature import display_temp
 from homeassistant.helpers.template import RenderInfo
 from homeassistant.helpers.typing import ConfigType
 
@@ -57,9 +58,6 @@ from .const import (
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_LAST_ASYNC_CONTROL_HVAC_MODE,
     ATTR_PRESET_NONE_SAVED_STATE,
-    ATTR_PREV_TARGET,
-    ATTR_PREV_TARGET_HIGH,
-    ATTR_PREV_TARGET_LOW,
     CONF_AUTO_COOL_DELTA,
     CONF_AUTO_HEAT_DELTA,
     CONF_CLIMATE_TEMP_DELTA,
@@ -662,9 +660,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.info("Old state: %s", old_state)
             # If we have no initial temperature, restore
             if self._target_temp_low is None:
-                old_target_low = old_state.attributes.get(ATTR_PREV_TARGET_LOW)
-                if old_target_low is None:
-                    old_target_low = old_state.attributes.get(ATTR_TARGET_TEMP_LOW)
+                old_target_low = old_state.attributes.get(ATTR_TARGET_TEMP_LOW)
                 if old_target_low is not None:
                     self._target_temp_low = float(old_target_low)
                 else:
@@ -675,9 +671,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                         self._target_temp_low,
                     )
             if self._target_temp_high is None:
-                old_target_high = old_state.attributes.get(ATTR_PREV_TARGET_HIGH)
-                if old_target_high is None:
-                    old_target_high = old_state.attributes.get(ATTR_TARGET_TEMP_HIGH)
+                old_target_high = old_state.attributes.get(ATTR_TARGET_TEMP_HIGH)
                 if old_target_high is not None:
                     self._target_temp_high = float(old_target_high)
                 else:
@@ -688,9 +682,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                         self._target_temp_high,
                     )
             if self._target_temp is None:
-                old_target = old_state.attributes.get(ATTR_PREV_TARGET)
-                if old_target is None:
-                    old_target = old_state.attributes.get(ATTR_TEMPERATURE)
+                old_target = old_state.attributes.get(ATTR_TEMPERATURE)
                 if old_target is not None:
                     self._target_temp = float(old_target)
                 else:
@@ -701,11 +693,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                         self._target_temp,
                     )
 
-            if (
-                not self._hvac_mode
-                and old_state.state
-                and old_state.state in self._hvac_list
-            ):
+            if not self._hvac_mode and old_state.state in self._hvac_list:
                 self._hvac_mode = old_state.state
                 self.set_support_flags()
 
@@ -864,12 +852,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         attrs[ATTR_LAST_ASYNC_CONTROL_HVAC_MODE] = self._last_async_control_hvac_mode
         attrs[ATTR_LAST_ACTIVE_HVAC_MODE] = self._last_active_hvac_mode
 
-        if self._target_temp is not None:
-            attrs[ATTR_PREV_TARGET] = self._target_temp
-        if self._target_temp_low is not None:
-            attrs[ATTR_PREV_TARGET_LOW] = self._target_temp_low
-        if self._target_temp_high is not None:
-            attrs[ATTR_PREV_TARGET_HIGH] = self._target_temp_high
         if self._saved_preset_state is not None:
             attrs[ATTR_PRESET_NONE_SAVED_STATE] = self._saved_preset_state
 
@@ -1065,18 +1047,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.error("%s: Unrecognized hvac mode: %s", self.name, hvac_mode)
             return
 
-        if HVACMode.HEAT_COOL in self._hvac_list and hvac_mode != self._hvac_mode:
-            if (
-                hvac_mode == HVACMode.COOL
-                and self._target_temp != self._target_temp_high
-            ):
-                self._target_temp = self._target_temp_high
-            if (
-                hvac_mode == HVACMode.HEAT
-                and self._target_temp != self._target_temp_low
-            ):
-                self._target_temp = self._target_temp_low
+        if hvac_mode == self._hvac_mode:
+            _LOGGER.info("No need to do anything. Hvac mode %s already set", hvac_mode)
+            return
 
+        self.toggle_target_temps(hvac_mode)
         self._hvac_mode = hvac_mode
         self.set_support_flags()
 
@@ -1084,8 +1059,41 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             force=True, reason=REASON_THERMOSTAT_HVAC_MODE_CHANGED
         )
 
-        # Ensure we update the current operation after changing the mode
         self.async_write_ha_state()
+
+    def toggle_target_temps(self, new_hvac_mode: HVACMode):
+        """Sync non-ranged with ranged target temperatures if necessary."""
+        if (
+            new_hvac_mode == HVACMode.HEAT_COOL
+            and self._last_active_hvac_mode != HVACMode.HEAT_COOL
+        ):
+            match self._last_active_hvac_mode:
+                case HVACMode.COOL:
+                    self._target_temp_high = self._target_temp
+                    self._target_temp_low = self._target_temp - 1.0
+                case HVACMode.HEAT:
+                    self._target_temp_low = self._target_temp
+                    self._target_temp_high = self._target_temp + 1.0
+                case HVACMode.AUTO:
+                    self._target_temp_low = self._target_temp - self._auto_heat_delta
+                    self._target_temp_high = self._target_temp + self._auto_cool_delta
+
+        elif (
+            new_hvac_mode in (HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO)
+            and self._last_active_hvac_mode == HVACMode.HEAT_COOL
+        ):
+            match new_hvac_mode:
+                case HVACMode.COOL:
+                    self._target_temp = self._target_temp_high
+                case HVACMode.HEAT:
+                    self._target_temp = self._target_temp_low
+                case HVACMode.AUTO:
+                    self._target_temp = display_temp(
+                        self.hass,
+                        (self._target_temp_low + self._target_temp_high) / 2,
+                        self._unit,
+                        self.precision,
+                    )
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -1097,17 +1105,14 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             if temperature is None:
                 return
             self._target_temp = temperature
-            if HVACMode.HEAT_COOL in self._hvac_list:
-                if self._hvac_mode == HVACMode.HEAT:
-                    self._target_temp_low = temperature
-                if self._hvac_mode == HVACMode.COOL:
-                    self._target_temp_high = temperature
 
         elif self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE:
-            if None in (temp_low, temp_high):
+            if temp_low is None and temp_high is None:
                 return
-            self._target_temp_low = temp_low
-            self._target_temp_high = temp_high
+            if temp_low is not None:
+                self._target_temp_low = temp_low
+            if temp_high is not None:
+                self._target_temp_high = temp_low
 
         await self._async_control(
             force=True, reason=REASON_THERMOSTAT_TARGET_TEMP_CHANGED
