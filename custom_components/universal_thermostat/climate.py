@@ -749,11 +749,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         """Return context."""
         return self._context
 
-    def get_hvac_mode(self):
-        """Return current HVAC mode."""
-        return self.hvac_mode
-
-    def get_ctrl_target_temperature(self, ctrl_hvac_mode):
+    def get_ctrl_target_temperature(self, ctrl_hvac_mode) -> float:
         """Return target temperature for controller."""
         if self._hvac_mode == HVACMode.HEAT_COOL:
             if ctrl_hvac_mode == HVACMode.HEAT:
@@ -780,17 +776,13 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         else:
             return self._target_temp
 
-    def get_current_temperature(self):
-        """Return current temperature from target sensor."""
-        return self.current_temperature
-
-    def _get_default_target_temp(self):
+    def _get_default_target_temp(self) -> float:
         return self.min_temp
 
-    def _get_default_target_temp_low(self):
+    def _get_default_target_temp_low(self) -> float:
         return self.min_temp
 
-    def _get_default_target_temp_high(self):
+    def _get_default_target_temp_high(self) -> float:
         return self.max_temp
 
     def get_used_template_entity_ids(self) -> list[str]:
@@ -828,17 +820,17 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         return tracked_entities
 
     @property
-    def should_poll(self):
+    def should_poll(self) -> bool:
         """Return the polling state."""
         return False
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the name of the thermostat."""
         return self._name
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str:
         """Return the unique id of this thermostat."""
         return self._unique_id
 
@@ -1066,7 +1058,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         self.async_write_ha_state()
 
-    def toggle_target_temps(self, new_hvac_mode: HVACMode):
+    def toggle_target_temps(self, new_hvac_mode: HVACMode) -> None:
         """Sync non-ranged with ranged target temperatures if necessary."""
         if (
             new_hvac_mode == HVACMode.HEAT_COOL
@@ -1145,6 +1137,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         new_hvac_mode = self._preset_ctrl.get_hvac_mode(self._hvac_mode)
         if new_hvac_mode in self._hvac_list and self._hvac_mode != new_hvac_mode:
+            _LOGGER.info(
+                "Preset %s settings needs to change hvac mode to %s",
+                preset_mode,
+                new_hvac_mode,
+            )
             self._hvac_mode = new_hvac_mode
             self.toggle_target_temps(new_hvac_mode)
             self._set_support_flags()
@@ -1157,6 +1154,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp, float)
                 and self._target_temp != new_target_temp
             ):
+                _LOGGER.info(
+                    "Preset %s settings needs to change target temperature to %s",
+                    preset_mode,
+                    new_target_temp,
+                )
                 self._target_temp = new_target_temp
 
         if self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE:
@@ -1167,6 +1169,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp_low, float)
                 and self._target_temp_low != new_target_temp_low
             ):
+                _LOGGER.info(
+                    "Preset %s settings needs to change low target temperature to %s",
+                    preset_mode,
+                    new_target_temp_low,
+                )
                 self._target_temp_low = new_target_temp_low
 
             new_target_temp_high = self._preset_ctrl.get_target_temp_high(
@@ -1176,6 +1183,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp_high, float)
                 and self._target_temp_high != new_target_temp_high
             ):
+                _LOGGER.info(
+                    "Preset %s settings needs to change high target temperature to %s",
+                    preset_mode,
+                    new_target_temp_high,
+                )
                 self._target_temp_high = new_target_temp_high
 
         if self._preset_ctrl.preset_mode == PRESET_NONE:
@@ -1187,7 +1199,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def _async_sensor_changed(self, event) -> None:
         """Handle temperature changes."""
         new_state = event.data.get("new_state")
-        _LOGGER.info("Sensor change: %s", new_state)
+        _LOGGER.info("Sensor changed: %s", new_state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 

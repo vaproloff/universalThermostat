@@ -51,7 +51,7 @@ class PIDController:
         if not delta_time:
             delta_time = 1e-16
         elif delta_time < 0:
-            return
+            return None
 
         # Return last output if sample time not met
         if (

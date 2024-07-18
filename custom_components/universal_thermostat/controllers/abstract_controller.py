@@ -18,8 +18,9 @@ _LOGGER = logging.getLogger(__name__)
 class Thermostat(abc.ABC):
     """Abstract class for universal thermostat entity."""
 
+    @property
     @abc.abstractmethod
-    def get_hvac_mode(self) -> str:
+    def hvac_mode(self) -> HVACMode:
         """Get thermostat HVAC mode."""
 
     @abc.abstractmethod
@@ -31,11 +32,12 @@ class Thermostat(abc.ABC):
         """Get Context instance."""
 
     @abc.abstractmethod
-    def get_ctrl_target_temperature(self, ctrl_hvac_mode):
+    def get_ctrl_target_temperature(self, ctrl_hvac_mode) -> float:
         """Return controller's target temperature."""
 
+    @property
     @abc.abstractmethod
-    def get_current_temperature(self):
+    def current_temperature(self) -> float:
         """Return the sensor temperature."""
 
     @abc.abstractmethod
@@ -137,7 +139,7 @@ class AbstractController(abc.ABC):
     @final
     async def async_start(self):
         """Turn on the controller."""
-        cur_temp = self._thermostat.get_current_temperature()
+        cur_temp = self._thermostat.current_temperature
         target_temp = self._thermostat.get_ctrl_target_temperature(self._mode)
 
         _LOGGER.debug(
@@ -187,7 +189,7 @@ class AbstractController(abc.ABC):
     async def async_control(self, time=None, force=False, reason=None):
         """Proccess tasks reacting on changes as the thermostat callback."""
 
-        cur_temp = self._thermostat.get_current_temperature()
+        cur_temp = self._thermostat.current_temperature
         target_temp = self._thermostat.get_ctrl_target_temperature(self._mode)
 
         # _LOGGER.debug("%s: %s - Control: cur: %s, target: %s, force: %s, time: %s, (%s)",
