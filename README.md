@@ -1,28 +1,25 @@
 # Universal Thermostat component for Home Assistant
 
-Integration based on [Smart Thermostat] custom component from [hacker-cb], who did the great job 
-I am extremely appreciated for!
-Compared with it, I've added some functionality for my needs, namely:
-* `heat_cool` mode now uses two target temperatures - `target_temp_low` and `target_temp_high`;
-* in `heat_cool` mode coolers and heaters both continue working according to their target set points;
-* added `auto` mode with common target temperatures and heating/cooling deltas - for those who prefer one temperature setting or who has compatibility issues with two targets;
-* `climate` domain controllers can now also work in simple toggling mode like `switch` without PID;
-* PID controller is now local module, not using any dependencies, with other - more classic behaviour;
-* Thermostat now restores its state when using `climate.turn_on` service;
-* PID parameters, tolerances, limits can now be templates, with values changing tracking without restarting;
-* controllers target entities state changing not causes control immediately, they will be updated after target sensor state change;
+Universal Thermostat is designed to complete almost all climate control tasks in a certain zone.
+
+Component grew out of [Smart Thermostat] from [hacker-cb], who did the great job I am extremely appreciated for!
+
+### Key features:
+- supports multiple heating and cooling entities
+- supports various target entity domains: `switch`, `climate`, `input_boolean`, `number`, `input_number`
+- supports invert logic for any heater or cooler
+- supports PID/PWM regulation for supported entities
+- supports `auto` mode with adjustable cooling and heating deltas
+- supports `heat_cool` mode with separate temperature cooling and heating setpoints
+- supports templates for configurable parameters
+- supports presets with flexible parameters
 
 ### Supported domains and modes for heaters and coolers:
 
-* `switch`, `input_boolean` - Basic toggling or PWM mode.
-* `climate` - Basic toggling or PID regulator.
-* `number`+`switch`, `input_number`+`switch` -  PID regulator with toggleable switch.
+* `switch`, `input_boolean` - basic toggling mode or PWM mode
+* `climate` - basic toggling mode or PID regulator mode
+* `number`+`switch`, `input_number`+`switch` -  PID regulator mode with toggleable switch
 
-### Current features:
-
-* Support multiple heaters/coolers.
-* Supports `heat_cool` and `auto` modes.
-* Supports invert logic of the heater/cooler.
 
 ## Installation (via HACS)
 
@@ -31,8 +28,9 @@ This is recommended way, which will handle one-click upgrade in HACS.
 1. Install [hacs] if it is not installed.
 2. Open HACS -> Integrations. Click 3 dots in the upper right corner.
 3. Click Custom repositories.
-4. Add `https://github.com/vaproloff/universalThermostat` repository.
-5. Find `Universal Thermostat` and click install button.
+4. Add `vaproloff/universalThermostat` repository.
+5. Find `Universal Thermostat` in HACS catalog and click `install` button.
+
 
 ## Installation (Manual)
 
@@ -45,6 +43,7 @@ NOTE: This is not recommended way, because you will need to upgrade component ma
    * _NOTE: You will need to create the `custom_components` folder if it does not exist._
 
 2. Restart Home Assistant Core.
+
 
 ## Simple config example
 ```yaml
@@ -98,6 +97,16 @@ climate:
         cold_tolerance: 0.3
         hot_tolerance: 0.3
         target_temp_delta: 1.0
+    presets:
+      sleep:
+        temp_delta: "{{ states('input_number.sleep_temp_delta') | float }}"
+      away:
+        heat_delta: -1.0
+        cool_delta: 2.0
+      eco:
+        target_temp: 18.0
+        heat_target_temp: 18.0
+        cool_target_temp: 29.0
 ```
 
 ## Glossary
@@ -126,8 +135,10 @@ climate:
 * `initial_hvac_mode` _(Optional)_ - Initial HVAC mode.
 * `precision` _(Optional)_ - Precision for this device. Supported values are 0.1, 0.5 and 1.0. Default: 0.1 for Celsius and 1.0 for Fahrenheit.
 * `target_temp_step` _(Optional)_ - Temperature set point step. Supported values are 0.1, 0.5 and 1.0. Default: equals to `precision`.
+* `presets` _(Optional)_ - Map of presets.
 
 _NOTE: at least one of `heater` or `cooler` is required._
+
 
 ## Common behavior
 
@@ -290,15 +301,93 @@ Domains: `number`,`input_number`
 * `pid_params` will be inverted if `inverted` was set to `true`
 * `switch_entity_id` behavior will be inverted if `switch_inverted` was set to `true`
 
+
+## Presets
+
+Presets are optional and will be available if at least one preset mode added to the config.
+All supported preset modes are equal in functionality, their behaviour depends only on used config parameters.
+
+#### Supported preset modes:
+* `sleep`
+* `away`
+* `eco`
+
+#### Common behavior
+* if any preset is active, changing `hvac_mode` manually resets current preset to `None`
+* if any preset is active, activating `None` `preset_mode` restores thermostat parameters to None-preset state
+* if any preset is active, activating another delta `preset_mode` applies all changes relatively to None-preset state
+* preset activation can change `hvac_mode` if preset config needs it
+* if you want to decrease target temperature, use negative float number.
+
+### Single temperature delta preset config:
+
+#### Config options
+
+* `temp_delta` _(Required)_ - single target temperature delta, signed float, can be a template
+
+#### Behavior
+
+* changes thermostat target temperatures (both ranged and non-ranged):
+  * `target_temp + temp_delta`
+  * `target_temp_low + temp_delta`
+  * `target_temp_high + temp_delta`
+
+### Heating/cooling temperature deltas preset config:
+
+#### Config options
+
+* `heat_delta` _(Required)_ - heating target temperature delta, signed float, can be a template
+* `cool_delta` _(Required)_ - heating target temperature delta, signed float, can be a template
+
+#### Behavior
+
+* if `hvac_mode` is `COOL` - changes thermostat target temperature:
+  * `target_temp + cool_delta`
+* if `hvac_mode` is `HEAT` - changes thermostat target temperature:
+  * `target_temp + heat_delta`
+* if `hvac_mode` is `HEAT_COOL` - changes thermostat target temperature:
+  * `target_temp_low + heat_delta`
+  * `target_temp_high + cool_delta`
+* if `hvac_mode` is `AUTO` - doesn't change thermostat target temperature,
+but creates additional deltas to `auto_cool_delta` and `auto_heat_delta` for `controllers`:
+  * heaters' `target_temp`s will be `target_temp - auto_heat_delta + heat_delta`
+  * coolers' `target_temp`s will be `target_temp + auto_cool_delta + cool_delta`
+
+### Target temperatures preset config:
+
+#### Config options
+
+* `target_temp` _(Optional)_ - single target temperature, signed float, can be a template
+* `heat_target_temp` _(Optional)_ - heating target temperature, signed float, can be a template
+* `cool_target_temp` _(Optional)_ - cooling target temperature, signed float, can be a template
+
+#### Behavior
+
+* if `hvac_mode` is `COOL` - changes thermostat target temperature to `cool_target_temp` if available
+or to `target_temp`:
+* if `hvac_mode` is `HEAT` - changes thermostat target temperature to `heat_target_temp` if available
+or to `target_temp`:
+* if `hvac_mode` is `HEAT_COOL` - changes thermostat target temperatures:
+  * `target_temp_low` will be `heat_target_temp` if available or `target_temp`
+  * `target_temp_high` will be `cool_target_temp` if available or `target_temp`
+* if `hvac_mode` is `AUTO` and only `target_temp` is available - changes thermostat target temperature to `target_temp`:
+* if `hvac_mode` is `AUTO` and `heat_target_temp` and `cool_target_temp` are available -
+doesn't change thermostat target temperature, but creates additional target temperatures for `controllers`:
+  * heaters' `target_temp`s will be `heat_target_temp`
+  * coolers' `target_temp`s will be `cool_target_temp`
+
+NOTE: Any of these config schemas could be used, but not mixed!
+
+
 ## Future TODOs:
 
 * Adjustable delays for turning heater/cooler on/off.
-* Add support for preset modes.
 * Add support templates for `pwm_period`.
+
 
 ## Reporting an Issue
 
-1. Setup your logger to print debug messages for this component using:
+1. Set up your logger to print debug messages for this component using:
 ```yaml
 logger:
   default: info
