@@ -241,14 +241,14 @@ KEY_SCHEMA = vol.Schema(
 
 PRESET_SCHEMA_TEMP_DELTA = vol.Schema(
     {
-        vol.Required(CONF_PRESET_TEMP_DELTA): vol.Coerce(float),
+        vol.Required(CONF_PRESET_TEMP_DELTA): cv.template,
     }
 )
 
 PRESET_SCHEMA_HEAT_COOL_DELTA = vol.Schema(
     {
-        vol.Required(CONF_PRESET_HEAT_DELTA): vol.Coerce(float),
-        vol.Required(CONF_PRESET_COOL_DELTA): vol.Coerce(float),
+        vol.Required(CONF_PRESET_HEAT_DELTA): cv.template,
+        vol.Required(CONF_PRESET_COOL_DELTA): cv.template,
     }
 )
 
@@ -261,15 +261,15 @@ PRESET_SCHEMA_TARGET_TEMP = vol.All(
                     CONF_PRESET_HEAT_TARGET_TEMP,
                     CONF_PRESET_COOL_TARGET_TEMP,
                 )
-            ): vol.Coerce(float),
+            ): object,
         },
         extra=ALLOW_EXTRA,
     ),
     vol.Schema(
         {
-            vol.Optional(CONF_PRESET_TARGET_TEMP): vol.Coerce(float),
-            vol.Optional(CONF_PRESET_HEAT_TARGET_TEMP): vol.Coerce(float),
-            vol.Optional(CONF_PRESET_COOL_TARGET_TEMP): vol.Coerce(float),
+            vol.Optional(CONF_PRESET_TARGET_TEMP): cv.template,
+            vol.Optional(CONF_PRESET_HEAT_TARGET_TEMP): cv.template,
+            vol.Optional(CONF_PRESET_COOL_TARGET_TEMP): cv.template,
         },
     ),
 )
