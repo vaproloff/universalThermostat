@@ -552,6 +552,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._unique_id = unique_id
         self._hvac_action = HVACAction.IDLE
         self._preset_ctrl: PresetController = preset_controller
+        self._saved_preset_state = None
 
         for controller in self._controllers:
             controller.set_thermostat(self)
@@ -570,9 +571,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             self._hvac_list.append(HVACMode.AUTO)
             if not heat_cool_disabled:
                 self._hvac_list.append(HVACMode.HEAT_COOL)
-
-        if self._preset_ctrl is not None:
-            self._saved_preset_state = None
 
         self._set_support_flags()
         self._enable_turn_on_off_backwards_compatibility = (
@@ -703,7 +701,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             )
 
             saved_preset_state = old_state.attributes.get(ATTR_PRESET_NONE_SAVED_STATE)
-            if saved_preset_state:
+            if saved_preset_state and self._preset_ctrl:
                 self._saved_preset_state = self._preset_ctrl.get_saved(
                     saved_preset_state.get(PRESET_NONE_HVAC_MODE),
                     saved_preset_state.get(PRESET_NONE_TARGET_TEMP),
@@ -712,7 +710,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 )
 
             old_preset_mode = old_state.attributes.get(ATTR_PRESET_MODE)
-            if old_preset_mode:
+            if old_preset_mode and self._preset_ctrl:
                 self._preset_ctrl.set_preset(old_preset_mode)
 
             last_mode = old_state.attributes.get(ATTR_LAST_ACTIVE_HVAC_MODE)
