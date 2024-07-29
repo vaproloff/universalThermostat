@@ -182,8 +182,9 @@ class ClimateSwitchController(SwitchController):
         )
 
     def _is_on(self):
-        state: State = self._hass.states.get(self._target_entity_id)
-        if not state:
-            return False
-
-        return state.state == self._mode
+        if not self._inverted:
+            return self._hass.states.is_state(self._target_entity_id, self._mode)
+        if self._mode == HVACMode.COOL:
+            return self._hass.states.is_state(self._target_entity_id, HVACMode.HEAT)
+        if self._mode == HVACMode.HEAT:
+            return self._hass.states.is_state(self._target_entity_id, HVACMode.COOL)

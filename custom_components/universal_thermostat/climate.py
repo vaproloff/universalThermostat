@@ -909,17 +909,14 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == HVACMode.OFF:
             return HVACAction.OFF
 
-        action = HVACAction.IDLE
-
         for controller in self._controllers:
-            if controller.working:
-                match controller.mode:
-                    case HVACMode.COOL:
-                        return HVACAction.COOLING
-                    case HVACMode.HEAT:
-                        return HVACAction.HEATING
+            if controller.is_active:
+                if controller.mode == HVACMode.COOL:
+                    return HVACAction.COOLING
+                if controller.mode == HVACMode.HEAT:
+                    return HVACAction.HEATING
 
-        return action
+        return HVACAction.IDLE
 
     @property
     def target_temperature(self) -> float | None:
@@ -1258,7 +1255,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 return
 
             for controller in self._controllers:
-                controller_debug_info = f"{controller.name}, running: {controller.running}, working: {controller.working}"
+                controller_debug_info = (
+                    f"running: {controller.running}, active: {controller.is_active}"
+                )
 
                 if controller.running:
                     if (

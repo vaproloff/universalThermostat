@@ -120,9 +120,9 @@ class AbstractController(abc.ABC):
         return self.__running
 
     @property
-    def working(self):
-        """If controller cooling/heating now."""
-        return self._is_on()
+    def is_active(self) -> bool:
+        """Is controller entity HVAC active."""
+        return self._is_on
 
     def get_unique_id(self):
         """Get unique ID, for attrs storage."""

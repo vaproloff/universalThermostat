@@ -97,15 +97,7 @@ class ClimatePidController(AbstractPidController):
         return tracked_entities
 
     def _is_on(self):
-        state: State = self._hass.states.get(self._target_entity_id)
-        if not state:
-            return False
-
-        hvac_action = state.attributes.get(ATTR_HVAC_ACTION)
-        if hvac_action is not None:
-            return hvac_action not in (HVACAction.IDLE, HVACAction.OFF)
-
-        return state.state == self._mode
+        return self._hass.states.is_state(self._target_entity_id, self._mode)
 
     def _adapt_pid_output(self, value: float) -> float:
         min_output, max_output = self._get_output_limits()

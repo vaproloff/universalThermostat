@@ -109,6 +109,8 @@ class NumberPidController(AbstractPidController):
         return tracked_entities
 
     def _is_on(self):
+        if self._switch_entity_id is None:
+            return self.__running
         return self._hass.states.is_state(
             self._switch_entity_id, STATE_ON if not self._switch_inverted else STATE_OFF
         )
