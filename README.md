@@ -59,6 +59,7 @@ climate:
   - platform: universal_thermostat    
     name: Kitchen Thermostat
     unique_id: kitchen_thermostat
+    object_id: kitchen_thermostat
     target_sensor: sensor.kitchen_temperature
     min_temp: 18
     max_temp: 28
@@ -121,6 +122,7 @@ climate:
 
 * `name` _(Required)_ - Climate entity name
 * `unique_id` _(Optional)_ - Climate entity `unique_id`
+* `object_id` _(Optional)_ - Climate entity suggested `entity_id`
 * `cooler` _(Optional)_ - String, Array or Map of the coolers.
 * `heater` _(Optional)_ - String, Array or Map of the heaters.
 * `target_sensor` _(Required)_ - Target temperature sensor
