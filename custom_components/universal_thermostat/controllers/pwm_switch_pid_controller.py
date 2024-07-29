@@ -120,8 +120,8 @@ class PwmSwitchPidController(AbstractPidController):
             await self._apply_output(output)
 
         _LOGGER.info(
-            "%s - %s: Setting up PWM switch. PWM value: %s, period: %s, last control: [state: %s, time: %s], check PWM control every %s",
-            self._thermostat_entity_id,
+            "%s - %s: setting up PWM switch. PWM value: %s, period: %s, last control: [state: %s, time: %s], check PWM control every %s",
+            self._thermostat.entity_id,
             self.name,
             self._pwm_value,
             self._pwm_period,
@@ -148,7 +148,7 @@ class PwmSwitchPidController(AbstractPidController):
     async def _async_turn_on(self, reason):
         _LOGGER.debug(
             "%s - %s: turning on %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -167,7 +167,7 @@ class PwmSwitchPidController(AbstractPidController):
     async def _async_turn_off(self, reason):
         _LOGGER.debug(
             "%s - %s: turning off %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -222,7 +222,7 @@ class PwmSwitchPidController(AbstractPidController):
             ):
                 _LOGGER.debug(
                     "%s: %s force ON (%s)",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     reason,
                 )
@@ -232,7 +232,7 @@ class PwmSwitchPidController(AbstractPidController):
             ):
                 _LOGGER.debug(
                     "%s: %s force OFF (%s)",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     reason,
                 )
@@ -255,7 +255,7 @@ class PwmSwitchPidController(AbstractPidController):
             # This should really never happen
             _LOGGER.error(
                 "%s - %s: PWM value is None (%s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 reason,
             )
@@ -302,7 +302,7 @@ class PwmSwitchPidController(AbstractPidController):
 
         _LOGGER.debug(
             "%s - %s: PWM value: %s, last: (state: %s, time: %s), dur: (on: %s, off: %s): state: (%s) ",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._pwm_value,
             self._last_control_state,

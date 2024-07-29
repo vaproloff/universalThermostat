@@ -74,7 +74,7 @@ class NumberPidController(AbstractPidController):
         if self._min_output_template is None:
             _LOGGER.warning(
                 "%s - %s: min_output template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._default_min_output,
             )
@@ -85,7 +85,7 @@ class NumberPidController(AbstractPidController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render min_output template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._min_output_template,
                 self._default_min_output,
@@ -98,7 +98,7 @@ class NumberPidController(AbstractPidController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert min_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 min_output,
                 self._default_min_output,
@@ -118,7 +118,7 @@ class NumberPidController(AbstractPidController):
             except ValueError as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity minimum value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     state.attributes.get(ATTR_MIN),
                     e,
@@ -126,7 +126,7 @@ class NumberPidController(AbstractPidController):
 
         _LOGGER.warning(
             "%s - %s: unable to get target entity minimum. Return default: %s",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._thermostat.min_temp,
         )
@@ -137,7 +137,7 @@ class NumberPidController(AbstractPidController):
         if self._max_output_template is None:
             _LOGGER.warning(
                 "%s - %s: max_output template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._default_max_output,
             )
@@ -148,7 +148,7 @@ class NumberPidController(AbstractPidController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render max_output template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._max_output_template,
                 self._default_max_output,
@@ -161,7 +161,7 @@ class NumberPidController(AbstractPidController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert max_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 max_output,
                 self._default_max_output,
@@ -181,7 +181,7 @@ class NumberPidController(AbstractPidController):
             except ValueError as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity maximum value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     state.attributes.get(ATTR_MAX),
                     e,
@@ -189,7 +189,7 @@ class NumberPidController(AbstractPidController):
 
         _LOGGER.warning(
             "%s - %s: unable to get target entity maximum. Return default: %s",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._thermostat.max_temp,
         )
@@ -222,7 +222,7 @@ class NumberPidController(AbstractPidController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get output_min template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._min_output_template,
                     e,
@@ -238,7 +238,7 @@ class NumberPidController(AbstractPidController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get output_max template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._max_output_template,
                     e,
@@ -262,7 +262,7 @@ class NumberPidController(AbstractPidController):
                 except ValueError as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert number step value to float: %s. Return default: %s. Error: %s",
-                        self._thermostat_entity_id,
+                        self._thermostat.entity_id,
                         self.name,
                         step,
                         value,
@@ -281,7 +281,7 @@ class NumberPidController(AbstractPidController):
             except ValueError as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert number value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     state.state,
                     e,
@@ -293,7 +293,7 @@ class NumberPidController(AbstractPidController):
 
         _LOGGER.debug(
             "%s - %s: turning on %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._switch_entity_id,
             reason,
@@ -315,7 +315,7 @@ class NumberPidController(AbstractPidController):
 
         _LOGGER.debug(
             "%s - %s: turning off %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._switch_entity_id,
             reason,

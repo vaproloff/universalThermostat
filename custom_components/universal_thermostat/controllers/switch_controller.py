@@ -54,7 +54,7 @@ class SwitchController(AbstractController):
         if self._cold_tolerance_template is None:
             _LOGGER.debug(
                 "%s - %s: cold_tolerance template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 DEFAULT_COLD_TOLERANCE,
             )
@@ -67,7 +67,7 @@ class SwitchController(AbstractController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render cold_tolerance template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._cold_tolerance_template,
                 DEFAULT_COLD_TOLERANCE,
@@ -80,7 +80,7 @@ class SwitchController(AbstractController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert cold_tolerance template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._cold_tolerance_template,
                 DEFAULT_COLD_TOLERANCE,
@@ -94,7 +94,7 @@ class SwitchController(AbstractController):
         if self._hot_tolerance_template is None:
             _LOGGER.warning(
                 "%s - %s: hot_tolerance template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 DEFAULT_HOT_TOLERANCE,
             )
@@ -107,7 +107,7 @@ class SwitchController(AbstractController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render hot_tolerance template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._hot_tolerance_template,
                 DEFAULT_HOT_TOLERANCE,
@@ -120,7 +120,7 @@ class SwitchController(AbstractController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert hot_tolerance template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._hot_tolerance_template,
                 DEFAULT_HOT_TOLERANCE,
@@ -146,7 +146,7 @@ class SwitchController(AbstractController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get cold_tolerance template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._cold_tolerance_template,
                     e,
@@ -162,7 +162,7 @@ class SwitchController(AbstractController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get hot_tolerance template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._hot_tolerance_template,
                     e,
@@ -175,7 +175,7 @@ class SwitchController(AbstractController):
     async def _async_turn_on(self, reason):
         _LOGGER.debug(
             "%s - %s: turning on %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -194,7 +194,7 @@ class SwitchController(AbstractController):
     async def _async_turn_off(self, reason):
         _LOGGER.debug(
             "%s - %s: turning off %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -261,7 +261,7 @@ class SwitchController(AbstractController):
 
         _LOGGER.debug(
             "%s - %s: too_hot: %s, too_cold: %s, need_turn_on: %s, need_turn_off: %s, is_on: %s, current_temp: %s, target_temp: %s, cold_tolerance: %s, hot_tolerance: %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             too_hot,
             too_cold,

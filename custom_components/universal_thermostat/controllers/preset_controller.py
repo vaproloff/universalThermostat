@@ -26,16 +26,17 @@ _LOGGER = logging.getLogger(__name__)
 class Preset:
     """Preset class."""
 
-    def __init__(self, preset_config: dict) -> None:
+    def __init__(self, thermostat_entity_id: str, preset_config: dict) -> None:
         """Initialize the preset."""
-        self._temp_delta_template: Template = preset_config.get("temp_delta")
-        self._heat_delta_template: Template = preset_config.get("heat_delta")
-        self._cool_delta_template: Template = preset_config.get("cool_delta")
-        self._target_temp_template: Template = preset_config.get("target_temp")
-        self._heat_target_temp_template: Template = preset_config.get(
+        self._thermostat_entity_id = thermostat_entity_id
+        self._temp_delta_template: Template | None = preset_config.get("temp_delta")
+        self._heat_delta_template: Template | None = preset_config.get("heat_delta")
+        self._cool_delta_template: Template | None = preset_config.get("cool_delta")
+        self._target_temp_template: Template | None = preset_config.get("target_temp")
+        self._heat_target_temp_template: Template | None = preset_config.get(
             "heat_target_temp"
         )
-        self._cool_target_temp_template: Template = preset_config.get(
+        self._cool_target_temp_template: Template | None = preset_config.get(
             "cool_target_temp"
         )
 
@@ -46,7 +47,8 @@ class Preset:
                 temp_delta = self._temp_delta_template.async_render(parse_result=False)
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
+                    "%s: unable to render temp_delta template: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._temp_delta_template,
                     e,
                 )
@@ -56,7 +58,8 @@ class Preset:
                 return float(temp_delta)
             except ValueError as e:
                 _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
+                    "%s: unable to convert temp_delta template value to float: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._temp_delta_template,
                     e,
                 )
@@ -68,7 +71,8 @@ class Preset:
                 heat_delta = self._heat_delta_template.async_render(parse_result=False)
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
+                    "%s: unable to render heat_delta template: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._heat_delta_template,
                     e,
                 )
@@ -78,7 +82,8 @@ class Preset:
                 return float(heat_delta)
             except ValueError as e:
                 _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
+                    "%s: unable to convert heat_delta template value to float: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._heat_delta_template,
                     e,
                 )
@@ -90,7 +95,8 @@ class Preset:
                 cool_delta = self._cool_delta_template.async_render(parse_result=False)
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
+                    "%s: unable to render cool_delta template: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._cool_delta_template,
                     e,
                 )
@@ -100,7 +106,8 @@ class Preset:
                 return float(cool_delta)
             except ValueError as e:
                 _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
+                    "%s: unable to convert cool_delta template value to float: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._cool_delta_template,
                     e,
                 )
@@ -114,7 +121,8 @@ class Preset:
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
+                    "%s: unable to render target_temp template: %s.Error: %s",
+                    self._thermostat_entity_id,
                     self._target_temp_template,
                     e,
                 )
@@ -124,7 +132,8 @@ class Preset:
                 return float(target_temp)
             except ValueError as e:
                 _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
+                    "%s: unable to convert target_temp template value to float: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._target_temp_template,
                     e,
                 )
@@ -138,7 +147,8 @@ class Preset:
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
+                    "%s: unable to render heat_target_temp template: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._heat_target_temp_template,
                     e,
                 )
@@ -148,7 +158,8 @@ class Preset:
                 return float(heat_target_temp)
             except ValueError as e:
                 _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
+                    "%s: unable to convert heat_target_temp template value to float: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._heat_target_temp_template,
                     e,
                 )
@@ -162,7 +173,8 @@ class Preset:
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
+                    "%s: unable to render cool_target_temp template: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._cool_target_temp_template,
                     e,
                 )
@@ -172,7 +184,8 @@ class Preset:
                 return float(cool_target_temp)
             except ValueError as e:
                 _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
+                    "%s: unable to convert cool_target_temp template value to float: %s. Error: %s",
+                    self._thermostat_entity_id,
                     self._cool_target_temp_template,
                     e,
                 )
@@ -189,8 +202,10 @@ class Preset:
         if current_hvac_mode in (HVACMode.AUTO, HVACMode.HEAT_COOL):
             if self._heat_target_temp is None and self._cool_target_temp is not None:
                 return HVACMode.COOL
+
             if self._heat_target_temp is not None and self._cool_target_temp is None:
                 return HVACMode.HEAT
+
             return current_hvac_mode
 
         if (
@@ -199,6 +214,7 @@ class Preset:
             and self._cool_target_temp is not None
         ):
             return HVACMode.COOL
+
         if (
             current_hvac_mode == HVACMode.COOL
             and self._heat_target_temp is None
@@ -272,12 +288,14 @@ class Preset:
         """Return auto mode heat delta according to preset config."""
         if self._heat_delta is not None:
             return self._heat_delta
+
         return DEFAULT_PRESET_AUTO_TEMP_DELTA
 
     def get_auto_cool_delta(self) -> float:
         """Return auto mode cool delta according to preset config."""
         if self._cool_delta is not None:
             return self._cool_delta
+
         return DEFAULT_PRESET_AUTO_TEMP_DELTA
 
     def get_auto_heat_target(self) -> float | None:
@@ -296,6 +314,7 @@ class PresetController:
 
     def __init__(self, presets) -> None:
         """Initialize the coordinator."""
+        self._presets = presets
         self._preset: Preset | None = None
         self._preset_sleep: Preset | None = None
         self._preset_away: Preset | None = None
@@ -306,16 +325,7 @@ class PresetController:
         self._saved_target_temp: float = None
         self._saved_target_temp_low: float = None
         self._saved_target_temp_high: float = None
-
-        if presets.get(PRESET_SLEEP) is not None:
-            self._preset_sleep = Preset(presets.get(PRESET_SLEEP))
-            self._preset_modes.append(PRESET_SLEEP)
-        if presets.get(PRESET_AWAY) is not None:
-            self._preset_away = Preset(presets.get(PRESET_AWAY))
-            self._preset_modes.append(PRESET_AWAY)
-        if presets.get(PRESET_ECO) is not None:
-            self._preset_eco = Preset(presets.get(PRESET_ECO))
-            self._preset_modes.append(PRESET_ECO)
+        self._thermostat_entity_id = None
 
     @property
     def preset_mode(self):
@@ -326,6 +336,62 @@ class PresetController:
     def preset_modes(self):
         """Return a list of available preset modes."""
         return self._preset_modes
+
+    @property
+    def auto_heat_delta(self) -> float:
+        """Return current preset new auto heat delta."""
+        if self._preset is not None:
+            return self._preset.get_auto_heat_delta()
+
+        return DEFAULT_PRESET_AUTO_TEMP_DELTA
+
+    @property
+    def auto_cool_delta(self) -> float:
+        """Return current preset new auto cool delta."""
+        if self._preset is not None:
+            return self._preset.get_auto_cool_delta()
+
+        return DEFAULT_PRESET_AUTO_TEMP_DELTA
+
+    @property
+    def auto_heat_target(self) -> float | None:
+        """Return current preset new auto heat target temperature."""
+        if self._preset is not None:
+            return self._preset.get_auto_heat_target()
+
+    @property
+    def auto_cool_target(self) -> float | None:
+        """Return current preset new auto cool target temperature."""
+        if self._preset is not None:
+            return self._preset.get_auto_cool_target()
+
+    async def async_added_to_hass(self, thermostat_entity_id: str):
+        """Process presets when adding thermostat entity."""
+        self._thermostat_entity_id = thermostat_entity_id
+
+        if self._presets.get(PRESET_SLEEP) is not None:
+            self._preset_sleep = Preset(
+                self._thermostat_entity_id, self._presets.get(PRESET_SLEEP)
+            )
+            self._preset_modes.append(PRESET_SLEEP)
+
+        if self._presets.get(PRESET_AWAY) is not None:
+            self._preset_away = Preset(
+                self._thermostat_entity_id, self._presets.get(PRESET_AWAY)
+            )
+            self._preset_modes.append(PRESET_AWAY)
+
+        if self._presets.get(PRESET_ECO) is not None:
+            self._preset_eco = Preset(
+                self._thermostat_entity_id, self._presets.get(PRESET_ECO)
+            )
+            self._preset_modes.append(PRESET_ECO)
+
+        _LOGGER.info(
+            "%s: presets ready, supported presets: %s",
+            self._thermostat_entity_id,
+            self._preset_modes,
+        )
 
     def set_preset(self, preset_mode) -> None:
         """Set preset."""
@@ -380,6 +446,7 @@ class PresetController:
         if self._preset is None:
             if self._saved_hvac_mode is not None:
                 return self._saved_hvac_mode
+
             return hvac_mode
 
         if self._saved_hvac_mode:
@@ -392,6 +459,7 @@ class PresetController:
         if self._preset is None:
             if self._saved_target_temp is not None:
                 return self._saved_target_temp
+
             return target_temp
 
         if self._saved_target_temp:
@@ -404,6 +472,7 @@ class PresetController:
         if self._preset is None:
             if self._saved_target_temp_low is not None:
                 return self._saved_target_temp_low
+
             return target_temp_low
 
         if self._saved_target_temp_low:
@@ -416,37 +485,10 @@ class PresetController:
         if self._preset is None:
             if self._saved_target_temp_high is not None:
                 return self._saved_target_temp_high
+
             return target_temp_high
 
         if self._saved_target_temp_high:
             return self._preset.get_target_temp_high(self._saved_target_temp_high)
 
         return self._preset.get_target_temp_high(target_temp_high)
-
-    @property
-    def auto_heat_delta(self) -> float:
-        """Return current preset new auto heat delta."""
-        if self._preset is not None:
-            return self._preset.get_auto_heat_delta()
-
-        return DEFAULT_PRESET_AUTO_TEMP_DELTA
-
-    @property
-    def auto_cool_delta(self) -> float:
-        """Return current preset new auto cool delta."""
-        if self._preset is not None:
-            return self._preset.get_auto_cool_delta()
-
-        return DEFAULT_PRESET_AUTO_TEMP_DELTA
-
-    @property
-    def auto_heat_target(self) -> float | None:
-        """Return current preset new auto heat target temperature."""
-        if self._preset is not None:
-            return self._preset.get_auto_heat_target()
-
-    @property
-    def auto_cool_target(self) -> float | None:
-        """Return current preset new auto cool target temperature."""
-        if self._preset is not None:
-            return self._preset.get_auto_cool_target()

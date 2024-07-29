@@ -68,7 +68,7 @@ class ClimatePidController(AbstractPidController):
         if self._min_output_template is None:
             _LOGGER.warning(
                 "%s - %s: min_output template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._default_min_output,
             )
@@ -79,7 +79,7 @@ class ClimatePidController(AbstractPidController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render min_output template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._min_output_template,
                 self._default_min_output,
@@ -92,7 +92,7 @@ class ClimatePidController(AbstractPidController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert min_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 min_output,
                 self._default_min_output,
@@ -112,7 +112,7 @@ class ClimatePidController(AbstractPidController):
             except ValueError as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity min_temp to float: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     state.attributes.get(ATTR_MIN_TEMP),
                     e,
@@ -120,7 +120,7 @@ class ClimatePidController(AbstractPidController):
 
         _LOGGER.warning(
             "%s - %s: unable to get target entity min_temp. Return default: %s",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._thermostat.min_temp,
         )
@@ -132,7 +132,7 @@ class ClimatePidController(AbstractPidController):
         if self._max_output_template is None:
             _LOGGER.warning(
                 "%s - %s: max_output template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._default_max_output,
             )
@@ -143,7 +143,7 @@ class ClimatePidController(AbstractPidController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render max_output template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._max_output_template,
                 self._default_max_output,
@@ -156,7 +156,7 @@ class ClimatePidController(AbstractPidController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert max_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 max_output,
                 self._default_max_output,
@@ -176,7 +176,7 @@ class ClimatePidController(AbstractPidController):
             except ValueError as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity max_temp to float: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     state.attributes.get(ATTR_MAX_TEMP),
                     e,
@@ -184,7 +184,7 @@ class ClimatePidController(AbstractPidController):
 
         _LOGGER.warning(
             "%s - %s: unable to get target entity max_temp. Return default: %s",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._thermostat.max_temp,
         )
@@ -222,7 +222,7 @@ class ClimatePidController(AbstractPidController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get output_min template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._min_output_template,
                     e,
@@ -238,7 +238,7 @@ class ClimatePidController(AbstractPidController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get output_max template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._max_output_template,
                     e,
@@ -262,7 +262,7 @@ class ClimatePidController(AbstractPidController):
                 except ValueError as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert climate temp_step value to float: %s. Return default: %s. Error: %s",
-                        self._thermostat_entity_id,
+                        self._thermostat.entity_id,
                         self.name,
                         step,
                         value,
@@ -281,7 +281,7 @@ class ClimatePidController(AbstractPidController):
             except ValueError as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target_temp value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     state.attributes.get(ATTR_TEMPERATURE),
                     e,
@@ -290,7 +290,7 @@ class ClimatePidController(AbstractPidController):
     async def _async_turn_on(self, reason=None):
         _LOGGER.debug(
             "%s - %s: turning on %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -311,7 +311,7 @@ class ClimatePidController(AbstractPidController):
     async def _async_turn_off(self, reason):
         _LOGGER.debug(
             "%s - %s: turning off %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,

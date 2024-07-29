@@ -18,33 +18,21 @@ _LOGGER = logging.getLogger(__name__)
 class Thermostat(abc.ABC):
     """Abstract class for universal thermostat entity."""
 
+    entity_id: str
+
+    @property
+    @abc.abstractmethod
+    def context(self) -> Context:
+        """Return context instance."""
+
     @property
     @abc.abstractmethod
     def hvac_mode(self) -> HVACMode:
         """Get thermostat HVAC mode."""
 
     @abc.abstractmethod
-    def get_entity_id(self) -> str:
-        """Get Entity name instance."""
-
-    @abc.abstractmethod
-    def get_context(self) -> Context:
-        """Get Context instance."""
-
-    @abc.abstractmethod
     def get_ctrl_target_temperature(self, ctrl_hvac_mode) -> float:
         """Return controller's target temperature."""
-        return self.precision
-
-    @property
-    @abc.abstractmethod
-    def temperature_unit(self) -> str:
-        """Return the unit of measurement."""
-
-    @property
-    @abc.abstractmethod
-    def precision(self) -> float:
-        """Return the precision of the system."""
 
     @property
     @abc.abstractmethod
@@ -100,12 +88,7 @@ class AbstractController(abc.ABC):
 
     @property
     def _context(self) -> Context:
-        return self._thermostat.get_context()
-
-    @property
-    @final
-    def _thermostat_entity_id(self) -> str:
-        return self._thermostat.get_entity_id()
+        return self._thermostat.context
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
@@ -140,7 +123,7 @@ class AbstractController(abc.ABC):
         if self._keep_alive:
             _LOGGER.info(
                 "%s - %s: setting up keep_alive (%s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._keep_alive,
             )
@@ -163,6 +146,10 @@ class AbstractController(abc.ABC):
         return []
 
     @final
+    async def __async_keep_alive(self, time=None):
+        await self.async_control(time=time, reason=REASON_KEEP_ALIVE)
+
+    @final
     async def async_start(self):
         """Turn on the controller."""
         cur_temp = self._thermostat.current_temperature
@@ -170,7 +157,7 @@ class AbstractController(abc.ABC):
 
         _LOGGER.debug(
             "%s - %s: trying to start controller, current: %s, target: %s ",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             cur_temp,
             target_temp,
@@ -180,7 +167,7 @@ class AbstractController(abc.ABC):
             self.__running = True
             _LOGGER.debug(
                 "%s - %s: controller started, current: %s, target: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 cur_temp,
                 target_temp,
@@ -188,7 +175,7 @@ class AbstractController(abc.ABC):
         else:
             _LOGGER.error(
                 "%s - %s: Error starting controller, current: %s, target: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 cur_temp,
                 target_temp,
@@ -198,7 +185,7 @@ class AbstractController(abc.ABC):
     async def async_stop(self):
         """Turn off the controller."""
         _LOGGER.debug(
-            "%s - %s: stopping controller", self._thermostat_entity_id, self.name
+            "%s - %s: stopping controller", self._thermostat.entity_id, self.name
         )
         await self._async_stop()
         self.__running = False
@@ -247,7 +234,3 @@ class AbstractController(abc.ABC):
         reason=None,
     ):
         """Control method implementation."""
-
-    @final
-    async def __async_keep_alive(self, time=None):
-        await self.async_control(time=time, reason=REASON_KEEP_ALIVE)
