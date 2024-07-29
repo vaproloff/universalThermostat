@@ -48,6 +48,92 @@ class SwitchController(AbstractController):
         self._hot_tolerance_template = hot_tolerance_template
         self._min_cycle_duration = min_cycle_duration
 
+    @property
+    def cold_tolerance(self) -> float:
+        """Returns Cold tolerance."""
+        if self._cold_tolerance_template is None:
+            _LOGGER.debug(
+                "%s - %s: cold_tolerance template is none. Return default: %s",
+                self._thermostat_entity_id,
+                self.name,
+                DEFAULT_COLD_TOLERANCE,
+            )
+            return float(DEFAULT_COLD_TOLERANCE)
+
+        try:
+            cold_tolerance = self._cold_tolerance_template.async_render(
+                parse_result=False
+            )
+        except (TemplateError, TypeError) as e:
+            _LOGGER.warning(
+                "%s - %s: unable to render cold_tolerance template: %s. Return default: %s. Error: %s",
+                self._thermostat_entity_id,
+                self.name,
+                self._cold_tolerance_template,
+                DEFAULT_COLD_TOLERANCE,
+                e,
+            )
+            return float(DEFAULT_COLD_TOLERANCE)
+
+        try:
+            return float(cold_tolerance)
+        except ValueError as e:
+            _LOGGER.warning(
+                "%s - %s: unable to convert cold_tolerance template value to float: %s. Return default: %s. Error: %s",
+                self._thermostat_entity_id,
+                self.name,
+                self._cold_tolerance_template,
+                DEFAULT_COLD_TOLERANCE,
+                e,
+            )
+            return float(DEFAULT_COLD_TOLERANCE)
+
+    @property
+    def hot_tolerance(self) -> float:
+        """Returns Hot tolerance."""
+        if self._hot_tolerance_template is None:
+            _LOGGER.warning(
+                "%s - %s: hot_tolerance template is none. Return default: %s",
+                self._thermostat_entity_id,
+                self.name,
+                DEFAULT_HOT_TOLERANCE,
+            )
+            return float(DEFAULT_HOT_TOLERANCE)
+
+        try:
+            hot_tolerance = self._hot_tolerance_template.async_render(
+                parse_result=False
+            )
+        except (TemplateError, TypeError) as e:
+            _LOGGER.warning(
+                "%s - %s: unable to render hot_tolerance template: %s. Return default: %s. Error: %s",
+                self._thermostat_entity_id,
+                self.name,
+                self._hot_tolerance_template,
+                DEFAULT_HOT_TOLERANCE,
+                e,
+            )
+            return float(DEFAULT_HOT_TOLERANCE)
+
+        try:
+            return float(hot_tolerance)
+        except ValueError as e:
+            _LOGGER.warning(
+                "%s - %s: unable to convert hot_tolerance template value to float: %s. Return default: %s. Error: %s",
+                self._thermostat_entity_id,
+                self.name,
+                self._hot_tolerance_template,
+                DEFAULT_HOT_TOLERANCE,
+                e,
+            )
+            return float(DEFAULT_HOT_TOLERANCE)
+
+    @property
+    def _is_on(self) -> bool:
+        return self._hass.states.is_state(
+            self._target_entity_id, STATE_ON if not self._inverted else STATE_OFF
+        )
+
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
@@ -59,7 +145,9 @@ class SwitchController(AbstractController):
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to get template info: %s.\nError: %s",
+                    "%s - %s: unable to get cold_tolerance template info: %s. Error: %s",
+                    self._thermostat_entity_id,
+                    self.name,
                     self._cold_tolerance_template,
                     e,
                 )
@@ -73,7 +161,9 @@ class SwitchController(AbstractController):
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to get template info: %s.\nError: %s",
+                    "%s - %s: unable to get hot_tolerance template info: %s. Error: %s",
+                    self._thermostat_entity_id,
+                    self.name,
                     self._hot_tolerance_template,
                     e,
                 )
@@ -82,65 +172,9 @@ class SwitchController(AbstractController):
 
         return tracked_entities
 
-    @property
-    def cold_tolerance(self) -> float:
-        """Returns Cold tolerance."""
-
-        if self._cold_tolerance_template is not None:
-            try:
-                cold_tolerance = self._cold_tolerance_template.async_render(
-                    parse_result=False
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
-                    self._cold_tolerance_template,
-                    e,
-                )
-                return float(DEFAULT_COLD_TOLERANCE)
-
-            try:
-                return float(cold_tolerance)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
-                    self._cold_tolerance_template,
-                    e,
-                )
-
-        return float(DEFAULT_COLD_TOLERANCE)
-
-    @property
-    def hot_tolerance(self) -> float:
-        """Returns Hot tolerance."""
-
-        if self._hot_tolerance_template is not None:
-            try:
-                hot_tolerance = self._hot_tolerance_template.async_render(
-                    parse_result=False
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "Unable to render template value: %s.\nError: %s",
-                    self._hot_tolerance_template,
-                    e,
-                )
-                return float(DEFAULT_HOT_TOLERANCE)
-
-            try:
-                return float(hot_tolerance)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "Unable to convert template value to float: %s.\nError: %s",
-                    self._hot_tolerance_template,
-                    e,
-                )
-
-        return float(DEFAULT_HOT_TOLERANCE)
-
     async def _async_turn_on(self, reason):
-        _LOGGER.info(
-            "%s: %s - Turning on switch %s (%s)",
+        _LOGGER.debug(
+            "%s - %s: turning on %s (%s)",
             self._thermostat_entity_id,
             self.name,
             self._target_entity_id,
@@ -148,16 +182,18 @@ class SwitchController(AbstractController):
         )
 
         service = SERVICE_TURN_ON if not self._inverted else SERVICE_TURN_OFF
+        service_data = {ATTR_ENTITY_ID: self._target_entity_id}
         await self._hass.services.async_call(
-            HA_DOMAIN,
-            service,
-            {ATTR_ENTITY_ID: self._target_entity_id},
+            domain=HA_DOMAIN,
+            service=service,
+            service_data=service_data,
+            blocking=True,
             context=self._context,
         )
 
     async def _async_turn_off(self, reason):
-        _LOGGER.info(
-            "%s: %s - Turning off switch %s (%s)",
+        _LOGGER.debug(
+            "%s - %s: turning off %s (%s)",
             self._thermostat_entity_id,
             self.name,
             self._target_entity_id,
@@ -165,16 +201,13 @@ class SwitchController(AbstractController):
         )
 
         service = SERVICE_TURN_OFF if not self._inverted else SERVICE_TURN_ON
+        service_data = {ATTR_ENTITY_ID: self._target_entity_id}
         await self._hass.services.async_call(
-            HA_DOMAIN,
-            service,
-            {ATTR_ENTITY_ID: self._target_entity_id},
+            domain=HA_DOMAIN,
+            service=service,
+            service_data=service_data,
+            blocking=True,
             context=self._context,
-        )
-
-    def _is_on(self):
-        return self._hass.states.is_state(
-            self._target_entity_id, STATE_ON if not self._inverted else STATE_OFF
         )
 
     async def _async_start(self, cur_temp, target_temp) -> bool:
@@ -184,7 +217,7 @@ class SwitchController(AbstractController):
         await self._async_turn_off(reason=REASON_THERMOSTAT_STOP)
 
     async def _async_ensure_not_running(self):
-        if self._is_on():
+        if self._is_on:
             await self._async_turn_off(REASON_THERMOSTAT_NOT_RUNNING)
 
     async def _async_control(
@@ -198,7 +231,7 @@ class SwitchController(AbstractController):
         # If the `force` argument is True, we
         # ignore `min_cycle_duration`.
         if not force and reason == REASON_KEEP_ALIVE and self._min_cycle_duration:
-            if self._is_on():
+            if self._is_on:
                 current_state = STATE_ON
             else:
                 current_state = HVACMode.OFF
@@ -215,13 +248,6 @@ class SwitchController(AbstractController):
             if not long_enough:
                 return
 
-        _LOGGER.info(
-            "CurTemp: %s. Target temp: %s, Tolerance: %s",
-            cur_temp,
-            target_temp,
-            self.cold_tolerance,
-        )
-
         too_cold = cur_temp <= target_temp - self.cold_tolerance
         too_hot = cur_temp >= target_temp + self.hot_tolerance
 
@@ -234,14 +260,14 @@ class SwitchController(AbstractController):
         )
 
         _LOGGER.debug(
-            "%s: %s - too_hot: %s, too_cold: %s, need_turn_on: %s, need_turn_off: %s, is on: %s, cur: %s, target: %s, cold_tolerance: %s, hot_tolerance: %s (%s)",
+            "%s - %s: too_hot: %s, too_cold: %s, need_turn_on: %s, need_turn_off: %s, is_on: %s, current_temp: %s, target_temp: %s, cold_tolerance: %s, hot_tolerance: %s (%s)",
             self._thermostat_entity_id,
             self.name,
             too_hot,
             too_cold,
             need_turn_on,
             need_turn_off,
-            self._is_on(),
+            self._is_on,
             cur_temp,
             target_temp,
             self.cold_tolerance,
@@ -249,7 +275,7 @@ class SwitchController(AbstractController):
             reason,
         )
 
-        if self._is_on():
+        if self._is_on:
             if need_turn_off:
                 await self._async_turn_off(reason=reason)
             elif reason == REASON_KEEP_ALIVE:

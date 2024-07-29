@@ -34,11 +34,32 @@ class Thermostat(abc.ABC):
     @abc.abstractmethod
     def get_ctrl_target_temperature(self, ctrl_hvac_mode) -> float:
         """Return controller's target temperature."""
+        return self.precision
+
+    @property
+    @abc.abstractmethod
+    def temperature_unit(self) -> str:
+        """Return the unit of measurement."""
+
+    @property
+    @abc.abstractmethod
+    def precision(self) -> float:
+        """Return the precision of the system."""
 
     @property
     @abc.abstractmethod
     def current_temperature(self) -> float:
         """Return the sensor temperature."""
+
+    @property
+    @abc.abstractmethod
+    def min_temp(self) -> float:
+        """Return the minimum temperature."""
+
+    @property
+    @abc.abstractmethod
+    def max_temp(self) -> float:
+        """Return the maximum temperature."""
 
     @abc.abstractmethod
     def async_write_ha_state(self) -> None:
@@ -78,12 +99,6 @@ class AbstractController(abc.ABC):
         self._thermostat = thermostat
 
     @property
-    @final
-    def mode(self) -> str:
-        """Return controller HVAC mode."""
-        return self._mode
-
-    @property
     def _context(self) -> Context:
         return self._thermostat.get_context()
 
@@ -97,13 +112,34 @@ class AbstractController(abc.ABC):
         """Return controller's extra attributes for thermostat entity."""
         return None
 
+    @property
+    @final
+    def mode(self) -> str:
+        """Return controller HVAC mode."""
+        return self._mode
+
+    @property
+    def running(self):
+        """If controller is turned on now."""
+        return self.__running
+
+    @property
+    @abc.abstractmethod
+    def _is_on(self) -> bool:
+        """Is controller entity turned on."""
+
+    @property
+    def is_active(self) -> bool:
+        """Is controller entity HVAC active."""
+        return self._is_on
+
     async def async_added_to_hass(self, hass: HomeAssistant, attrs: Mapping[str, Any]):
         """Add controller when adding thermostat entity."""
         self._hass = hass
 
         if self._keep_alive:
-            _LOGGER.debug(
-                "%s: %s - Setting up keep_alive: %s",
+            _LOGGER.info(
+                "%s - %s: setting up keep_alive (%s)",
                 self._thermostat_entity_id,
                 self.name,
                 self._keep_alive,
@@ -113,16 +149,6 @@ class AbstractController(abc.ABC):
                     self._hass, self.__async_keep_alive, self._keep_alive
                 )
             )
-
-    @property
-    def running(self):
-        """If controller is turned on now."""
-        return self.__running
-
-    @property
-    def working(self):
-        """If controller cooling/heating now."""
-        return self._is_on()
 
     def get_unique_id(self):
         """Get unique ID, for attrs storage."""
@@ -143,7 +169,7 @@ class AbstractController(abc.ABC):
         target_temp = self._thermostat.get_ctrl_target_temperature(self._mode)
 
         _LOGGER.debug(
-            "%s: %s - Trying to start controller, cur: %s, target: %s ",
+            "%s - %s: trying to start controller, current: %s, target: %s ",
             self._thermostat_entity_id,
             self.name,
             cur_temp,
@@ -153,7 +179,7 @@ class AbstractController(abc.ABC):
         if await self._async_start(cur_temp, target_temp):
             self.__running = True
             _LOGGER.debug(
-                "%s: %s - Started controller, cur: %s, target: %s",
+                "%s - %s: controller started, current: %s, target: %s",
                 self._thermostat_entity_id,
                 self.name,
                 cur_temp,
@@ -161,7 +187,7 @@ class AbstractController(abc.ABC):
             )
         else:
             _LOGGER.error(
-                "%s: %s - Error starting controller, cur: %s, target: %s",
+                "%s - %s: Error starting controller, current: %s, target: %s",
                 self._thermostat_entity_id,
                 self.name,
                 cur_temp,
@@ -172,10 +198,14 @@ class AbstractController(abc.ABC):
     async def async_stop(self):
         """Turn off the controller."""
         _LOGGER.debug(
-            "%s: %s - Stopping controller", self._thermostat_entity_id, self.name
+            "%s - %s: stopping controller", self._thermostat_entity_id, self.name
         )
         await self._async_stop()
         self.__running = False
+
+    def _round_to_target_precision(self, value: float) -> float:
+        """Round output to target precision."""
+        return value
 
     @abc.abstractmethod
     async def _async_start(self, cur_temp, target_temp) -> bool:
@@ -185,20 +215,16 @@ class AbstractController(abc.ABC):
     async def _async_stop(self):
         """Stop controller implementation."""
 
+    @abc.abstractmethod
+    async def _async_ensure_not_running(self):
+        """Ensure that target is off."""
+
     @final
     async def async_control(self, time=None, force=False, reason=None):
         """Proccess tasks reacting on changes as the thermostat callback."""
 
         cur_temp = self._thermostat.current_temperature
         target_temp = self._thermostat.get_ctrl_target_temperature(self._mode)
-
-        # _LOGGER.debug("%s: %s - Control: cur: %s, target: %s, force: %s, time: %s, (%s)",
-        #               self._thermostat_entity_id, self.name,
-        #               cur_temp, target_temp,
-        #               force,
-        #               True if time else False,
-        #               reason
-        #               )
 
         if not self.__running:
             await self._async_ensure_not_running()
@@ -211,10 +237,6 @@ class AbstractController(abc.ABC):
                 reason=reason,
             )
 
-    @final
-    async def __async_keep_alive(self, time=None):
-        await self.async_control(time=time, reason=REASON_KEEP_ALIVE)
-
     @abc.abstractmethod
     async def _async_control(
         self,
@@ -224,12 +246,8 @@ class AbstractController(abc.ABC):
         force=False,
         reason=None,
     ):
-        """Control method. Should be overwritten in child classes."""
+        """Control method implementation."""
 
-    @abc.abstractmethod
-    def _is_on(self):
-        """Is controller entity turned on."""
-
-    @abc.abstractmethod
-    async def _async_ensure_not_running(self):
-        """Ensure that target is off."""
+    @final
+    async def __async_keep_alive(self, time=None):
+        await self.async_control(time=time, reason=REASON_KEEP_ALIVE)
