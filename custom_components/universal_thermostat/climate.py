@@ -14,6 +14,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     DOMAIN as CLIMATE_DOMAIN,
+    ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     PRESET_NONE,
     ClimateEntity,
@@ -36,6 +37,7 @@ from homeassistant.const import (
     PRECISION_WHOLE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
+    UnitOfTemperature,
 )
 from homeassistant.core import (
     Context,
@@ -47,10 +49,11 @@ from homeassistant.core import (
 )
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.template import RenderInfo
+from homeassistant.helpers.template import RenderInfo, Template
 from homeassistant.helpers.typing import ConfigType
 
 from . import DOMAIN, PLATFORMS
@@ -72,6 +75,7 @@ from .const import (
     CONF_MAX_TEMP,
     CONF_MIN_DUR,
     CONF_MIN_TEMP,
+    CONF_OBJECT_ID,
     CONF_PID_KD,
     CONF_PID_KI,
     CONF_PID_KP,
@@ -288,6 +292,7 @@ DATA_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_UNIQUE_ID): cv.string,
+        vol.Optional(CONF_OBJECT_ID): cv.string,
         vol.Optional(CONF_HEATER): vol.Any(
             _cv_controller_target, [_cv_controller_target]
         ),
@@ -460,6 +465,7 @@ async def async_setup_platform(
     target_temp_step = config.get(CONF_TEMP_STEP)
     unit = hass.config.units.temperature_unit
     unique_id = config.get(CONF_UNIQUE_ID)
+    object_id = config.get(CONF_OBJECT_ID)
 
     heater_config = config.get(CONF_HEATER)
     cooler_config = config.get(CONF_COOLER)
@@ -483,6 +489,7 @@ async def async_setup_platform(
     async_add_entities(
         [
             UniversalThermostat(
+                hass,
                 name,
                 controllers,
                 sensor_entity_id,
@@ -499,6 +506,7 @@ async def async_setup_platform(
                 target_temp_step,
                 unit,
                 unique_id,
+                object_id,
                 preset_contoller,
             )
         ]
@@ -510,27 +518,29 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     def __init__(
         self,
-        name,
-        controllers,
-        sensor_entity_id,
-        min_temp,
-        max_temp,
-        target_temp,
-        target_temp_high,
-        target_temp_low,
-        auto_cool_delta,
-        auto_heat_delta,
-        heat_cool_disabled,
-        initial_hvac_mode,
-        precision,
-        target_temp_step,
-        unit,
-        unique_id,
-        preset_controller,
+        hass: HomeAssistant | None,
+        name: str,
+        controllers: list[AbstractController],
+        sensor_entity_id: str,
+        min_temp: float | None,
+        max_temp: float | None,
+        target_temp: float | None,
+        target_temp_high: float | None,
+        target_temp_low: float | None,
+        auto_cool_delta: Template | None,
+        auto_heat_delta: Template | None,
+        heat_cool_disabled: bool,
+        initial_hvac_mode: HVACMode | None,
+        precision: float | None,
+        target_temp_step: float | None,
+        unit: UnitOfTemperature,
+        unique_id: str | None,
+        object_id: str | None,
+        preset_controller: PresetController | None,
     ) -> None:
         """Initialize the thermostat."""
         self._name = name
-        self._controllers: list[AbstractController] = controllers
+        self._controllers = controllers
         self.sensor_entity_id = sensor_entity_id
         self._hvac_mode = initial_hvac_mode
         self._last_async_control_hvac_mode = None
@@ -550,9 +560,14 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._auto_heat_delta_template = auto_heat_delta
         self._unit = unit
         self._unique_id = unique_id
-        self._hvac_action = HVACAction.IDLE
-        self._preset_ctrl: PresetController = preset_controller
+        self._hvac_action: HVACAction = HVACAction.IDLE
+        self._preset_ctrl = preset_controller
         self._saved_preset_state = None
+
+        if object_id:
+            self.entity_id = async_generate_entity_id(
+                ENTITY_ID_FORMAT, object_id, None, hass
+            )
 
         for controller in self._controllers:
             controller.set_thermostat(self)
@@ -733,10 +748,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         if not self._hvac_mode:
             self._hvac_mode = HVACMode.OFF
             self._last_active_hvac_mode = None
-
-    def get_hass(self) -> HomeAssistant:
-        """Return Hass object."""
-        return self.hass
 
     def get_entity_id(self) -> str:
         """Return universal thermostat entity_id."""
