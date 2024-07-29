@@ -1206,7 +1206,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def _async_controller_target_entities_changed(self, event) -> None:
         """Handle controller target entities changes."""
         _ = event
-        await self._async_control(reason=REASON_CONTROL_ENTITY_CHANGED)
         self.async_write_ha_state()
 
     async def _async_controller_template_entities_changed(self, event) -> None:
