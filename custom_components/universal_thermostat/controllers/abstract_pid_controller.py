@@ -71,7 +71,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid_kp_template is None:
             _LOGGER.warning(
                 "%s - %s: pid_kp template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 DEFAULT_PID_KP,
             )
@@ -82,7 +82,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render pid_kp template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid_kp_template,
                 DEFAULT_PID_KP,
@@ -95,7 +95,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert pid_kp template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 pid_kp,
                 DEFAULT_PID_KP,
@@ -117,7 +117,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid_ki_template is None:
             _LOGGER.warning(
                 "%s - %s: pid_ki template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 DEFAULT_PID_KI,
             )
@@ -128,7 +128,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render pid_ki template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid_ki_template,
                 DEFAULT_PID_KI,
@@ -141,7 +141,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert pid_ki template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 pid_ki,
                 DEFAULT_PID_KI,
@@ -163,7 +163,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid_kd_template is None:
             _LOGGER.warning(
                 "%s - %s: pid_kd template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 DEFAULT_PID_KD,
             )
@@ -174,7 +174,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render pid_kd template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid_kd_template,
                 DEFAULT_PID_KD,
@@ -187,7 +187,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert pid_kd template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 pid_kd,
                 DEFAULT_PID_KD,
@@ -210,7 +210,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid_sample_period:
             _LOGGER.info(
                 "%s - %s: setting up PID regulator - static period mode (%s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid_sample_period,
             )
@@ -222,7 +222,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         else:
             _LOGGER.info(
                 "%s - %s: setting up PID regulator - dynamic period mode on sensor changes",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
             )
 
@@ -236,7 +236,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get pid_kp template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._pid_kp_template,
                     e,
@@ -250,7 +250,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get pid_ki template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._pid_ki_template,
                     e,
@@ -264,7 +264,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get pid_kd template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._pid_kd_template,
                     e,
@@ -315,7 +315,7 @@ class AbstractPidController(AbstractController, abc.ABC):
 
         _LOGGER.debug(
             "%s - %s: PID setup done (pid_kp: %s, pid_ki: %s, pid_kd: %s, limits: %s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             pid_kp,
             pid_ki,
@@ -339,14 +339,14 @@ class AbstractPidController(AbstractController, abc.ABC):
     ):
         if not self._pid:
             # This should really never happen
-            _LOGGER.error("%s - %s: PID in None", self._thermostat_entity_id, self.name)
+            _LOGGER.error("%s - %s: PID in None", self._thermostat.entity_id, self.name)
             return
 
         kp_new = self.pid_kp
         if self._pid.kp != kp_new:
             _LOGGER.debug(
                 "%s - %s: proportional gain changed (%s -> %s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid.kp,
                 kp_new,
@@ -357,7 +357,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid.ki != ki_new:
             _LOGGER.debug(
                 "%s - %s: integral gain changed (%s -> %s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid.ki,
                 ki_new,
@@ -369,7 +369,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid.kd != kd_new:
             _LOGGER.debug(
                 "%s - %s: derivative gain changed (%s -> %s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid.kd,
                 kd_new,
@@ -380,7 +380,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._pid.set_point != target_temp:
             _LOGGER.debug(
                 "%s - %s: target setpoint changed (%s -> %s) (%s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._pid.set_point,
                 target_temp,
@@ -393,7 +393,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if self._last_output_limits != output_limits:
             _LOGGER.debug(
                 "%s - %s: output limits changed (%s -> %s) (%s)",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._last_output_limits,
                 output_limits,
@@ -415,7 +415,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             if output is None:
                 _LOGGER.debug(
                     "%s - %s: PID output is None",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                 )
                 return
@@ -425,7 +425,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             except ValueError:
                 _LOGGER.debug(
                     "%s - %s: unable to convert PID output value to float: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     output,
                 )
@@ -438,7 +438,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             if current_output != output:
                 _LOGGER.debug(
                     "%s - %s: cur_temp: %s -> %s, target_temp: %s, limits: %s, adjusting: %s -> %s (%s) (p: %f, i: %f, d: %f)",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._last_current_value,
                     cur_temp,
@@ -455,7 +455,7 @@ class AbstractPidController(AbstractController, abc.ABC):
             else:
                 _LOGGER.debug(
                     "%s - %s: cur_temp: %s -> %s, target_temp: %s, limits: %s, no changes needed, output: %s (%s) (p: %f, i: %f, d: %f)",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._last_current_value,
                     cur_temp,
@@ -477,7 +477,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         if None in (min_output, max_output):
             _LOGGER.error(
                 "%s - %s: invalid output limits: %s, %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 min_output,
                 max_output,

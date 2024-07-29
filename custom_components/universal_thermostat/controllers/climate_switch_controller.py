@@ -61,7 +61,7 @@ class ClimateSwitchController(SwitchController):
         if self._temp_delta_template is None:
             _LOGGER.warning(
                 "%s - %s: temp_delta template is none. Return default: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 DEFAULT_CLIMATE_TEMP_DELTA,
             )
@@ -72,7 +72,7 @@ class ClimateSwitchController(SwitchController):
         except (TemplateError, TypeError) as e:
             _LOGGER.warning(
                 "%s - %s: unable to render temp_delta template: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._temp_delta_template,
                 DEFAULT_CLIMATE_TEMP_DELTA,
@@ -85,7 +85,7 @@ class ClimateSwitchController(SwitchController):
         except ValueError as e:
             _LOGGER.warning(
                 "%s - %s: unable to convert temp_delta template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._temp_delta_template,
                 DEFAULT_CLIMATE_TEMP_DELTA,
@@ -144,7 +144,7 @@ class ClimateSwitchController(SwitchController):
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to get temp_delta template info: %s. Error: %s",
-                    self._thermostat_entity_id,
+                    self._thermostat.entity_id,
                     self.name,
                     self._temp_delta_template,
                     e,
@@ -157,7 +157,7 @@ class ClimateSwitchController(SwitchController):
     async def _async_turn_on(self, reason):
         _LOGGER.debug(
             "%s - %s: turning on %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -193,7 +193,7 @@ class ClimateSwitchController(SwitchController):
     async def _async_turn_off(self, reason):
         _LOGGER.debug(
             "%s - %s: turning off %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             self._target_entity_id,
             reason,
@@ -218,7 +218,7 @@ class ClimateSwitchController(SwitchController):
                 except ValueError as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert climate temp_step value to float: %s. Return default: %s. Error: %s",
-                        self._thermostat_entity_id,
+                        self._thermostat.entity_id,
                         self.name,
                         step,
                         value,
@@ -270,7 +270,7 @@ class ClimateSwitchController(SwitchController):
         ):
             _LOGGER.debug(
                 "%s - %s: no need to change target_temp for %s - %s already set",
-                self._thermostat_entity_id,
+                self._thermostat.entity_id,
                 self.name,
                 self._target_entity_id,
                 target_temp,
@@ -279,7 +279,7 @@ class ClimateSwitchController(SwitchController):
 
         _LOGGER.debug(
             "%s - %s: changing target_temp for %s to %s (%s)",
-            self._thermostat_entity_id,
+            self._thermostat.entity_id,
             self.name,
             target_temp,
             self._target_entity_id,
