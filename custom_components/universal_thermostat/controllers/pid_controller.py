@@ -41,7 +41,6 @@ class PIDController:
 
     def update(self, feedback_value, in_time=None):
         """Calculate PID value for given reference feedback."""
-
         current_time = in_time if in_time is not None else self.current_time()
         if self._last_time is None:
             self._last_time = current_time
@@ -185,4 +184,5 @@ class PIDController:
 
         if value is None:
             return None
+
         return max(min(value, upper), lower)

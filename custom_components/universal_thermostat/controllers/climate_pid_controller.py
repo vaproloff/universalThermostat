@@ -337,6 +337,7 @@ class ClimatePidController(AbstractPidController):
     def _get_output_limits(self) -> tuple[float | None, float | None]:
         if self.mode == HVACMode.COOL:
             return self._max_output, self._min_output
+
         return self._min_output, self._max_output
 
     async def _apply_output(self, output: float):

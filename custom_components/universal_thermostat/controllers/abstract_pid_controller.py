@@ -278,6 +278,7 @@ class AbstractPidController(AbstractController, abc.ABC):
     async def __async_pid_control(self, time=None):
         if not self.running:
             return
+
         await self.async_control(time=time, reason=REASON_PID_CONTROL)
 
     async def _async_start(self, cur_temp, target_temp) -> bool:
@@ -430,9 +431,9 @@ class AbstractPidController(AbstractController, abc.ABC):
                     output,
                 )
                 return
+
             output = self._adapt_pid_output(output)
             output = self._round_to_target_precision(output)
-
             current_output = self._round_to_target_precision(self._get_current_output())
 
             if current_output != output:
@@ -483,6 +484,7 @@ class AbstractPidController(AbstractController, abc.ABC):
                 max_output,
             )
             return False
+
         return True
 
     def __get_output_limits(self) -> tuple[float, float]:
@@ -496,10 +498,6 @@ class AbstractPidController(AbstractController, abc.ABC):
     @abc.abstractmethod
     def _adapt_pid_output(self, value: float) -> float:
         """Adapt PID output to output limits."""
-
-    @abc.abstractmethod
-    def _round_to_target_precision(self, value: float) -> float:
-        """Round output to target precision."""
 
     @abc.abstractmethod
     def _get_current_output(self):
