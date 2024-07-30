@@ -197,15 +197,36 @@ class Preset:
             or None not in (self._heat_delta, self._cool_delta)
             or self._target_temp is not None
         ):
+            _LOGGER.debug(
+                "%s - preset_ctrl: no need to change hvac_mode",
+                self._thermostat_entity_id,
+            )
             return current_hvac_mode
 
         if current_hvac_mode in (HVACMode.AUTO, HVACMode.HEAT_COOL):
             if self._heat_target_temp is None and self._cool_target_temp is not None:
+                _LOGGER.debug(
+                    "%s - preset_ctrl: no heat_target_temp but cool_target_temp defined in %s mode - return %s",
+                    self._thermostat_entity_id,
+                    current_hvac_mode,
+                    HVACMode.COOL,
+                )
                 return HVACMode.COOL
 
             if self._heat_target_temp is not None and self._cool_target_temp is None:
+                _LOGGER.debug(
+                    "%s - preset_ctrl: no cool_target_temp but heat_target_temp defined in %s mode - return %s",
+                    self._thermostat_entity_id,
+                    current_hvac_mode,
+                    HVACMode.HEAT,
+                )
                 return HVACMode.HEAT
 
+            _LOGGER.debug(
+                "%s - preset_ctrl: cool_target_temp and heat_target_temp defined in %s mode - return no need to change",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+            )
             return current_hvac_mode
 
         if (
@@ -213,73 +234,180 @@ class Preset:
             and self._heat_target_temp is None
             and self._cool_target_temp is not None
         ):
+            _LOGGER.debug(
+                "%s - preset_ctrl: no heat_target_temp but cool_target_temp defined in %s mode - return %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                HVACMode.COOL,
+            )
             return HVACMode.COOL
 
         if (
             current_hvac_mode == HVACMode.COOL
-            and self._heat_target_temp is None
-            and self._cool_target_temp is not None
+            and self._cool_target_temp is None
+            and self._heat_target_temp is not None
         ):
+            _LOGGER.debug(
+                "%s - preset_ctrl: no cool_target_temp but heat_target_temp defined in %s mode - return %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                HVACMode.HEAT,
+            )
             return HVACMode.HEAT
 
+        _LOGGER.debug(
+            "%s - preset_ctrl: any hvac_mode condition matched - leaving %s",
+            self._thermostat_entity_id,
+            current_hvac_mode,
+        )
         return current_hvac_mode
 
     def get_target_temp(self, current_hvac_mode, current_target_temp) -> float:
         """Return new target temp according to preset config."""
         if self._temp_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: temp_delta defined - adjusting target_temp by %s",
+                self._thermostat_entity_id,
+                self._temp_delta,
+            )
             return current_target_temp + self._temp_delta
 
         if current_hvac_mode == HVACMode.COOL and self._cool_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: cool_delta defined in %s mode - adjusting target_temp by %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                self._cool_delta,
+            )
             return current_target_temp + self._cool_delta
 
         if current_hvac_mode == HVACMode.HEAT and self._heat_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: heat_delta defined in %s mode - adjusting target_temp by %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                self._heat_delta,
+            )
             return current_target_temp + self._heat_delta
 
         if current_hvac_mode == HVACMode.COOL and self._cool_target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: cool_target_temp defined in %s mode - setting target_temp to %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                self._cool_target_temp,
+            )
             return self._cool_target_temp
 
         if current_hvac_mode == HVACMode.HEAT and self._heat_target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: heat_target_temp defined in %s mode - setting target_temp to %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                self._heat_target_temp,
+            )
             return self._heat_target_temp
 
         if current_hvac_mode == HVACMode.AUTO and None not in (
             self._heat_target_temp,
             self._cool_target_temp,
         ):
+            _LOGGER.debug(
+                "%s - preset_ctrl: heat_target_temp and cool_target_temp defined in %s mode - leaving target_temp on %s",
+                self._thermostat_entity_id,
+                current_hvac_mode,
+                current_target_temp,
+            )
             return current_target_temp
 
         if self._target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: target_temp defined - setting to %s",
+                self._thermostat_entity_id,
+                self._target_temp,
+            )
             return self._target_temp
 
+        _LOGGER.debug(
+            "%s - preset_ctrl: any target_temp condition matched - leaving %s",
+            self._thermostat_entity_id,
+            current_target_temp,
+        )
         return current_target_temp
 
     def get_target_temp_low(self, current_target_temp_low) -> float:
         """Return new low target temp according to preset config."""
         if self._temp_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: temp_delta defined - adjusting target_temp_low by %s",
+                self._thermostat_entity_id,
+                self._temp_delta,
+            )
             return current_target_temp_low + self._temp_delta
 
         if self._heat_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: heat_delta defined - adjusting target_temp_low by %s",
+                self._thermostat_entity_id,
+                self._heat_delta,
+            )
             return current_target_temp_low + self._heat_delta
 
         if self._heat_target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: heat_target_temp defined - setting target_temp_low to %s",
+                self._thermostat_entity_id,
+                self._heat_target_temp,
+            )
             return self._heat_target_temp
 
         if self._target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: target_temp defined - setting target_temp_low to %s",
+                self._thermostat_entity_id,
+                self._heat_target_temp,
+            )
             return self._target_temp
 
+        _LOGGER.debug(
+            "%s - preset_ctrl: any target_temp_low condition matched - leaving %s",
+            self._thermostat_entity_id,
+            current_target_temp_low,
+        )
         return current_target_temp_low
 
     def get_target_temp_high(self, current_target_temp_high: float) -> float:
         """Return new high target temp according to preset config."""
         if self._temp_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: temp_delta defined - adjusting target_temp_high by %s",
+                self._thermostat_entity_id,
+                self._temp_delta,
+            )
             return current_target_temp_high + self._temp_delta
 
         if self._cool_delta is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: cool_delta defined - adjusting target_temp_high by %s",
+                self._thermostat_entity_id,
+                self._cool_delta,
+            )
             return current_target_temp_high + self._cool_delta
 
         if self._cool_target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: cool_target_temp defined - setting target_temp_high to %s",
+                self._thermostat_entity_id,
+                self._cool_target_temp,
+            )
             return self._cool_target_temp
 
         if self._target_temp is not None:
+            _LOGGER.debug(
+                "%s - preset_ctrl: target_temp defined - setting target_temp_high to %s",
+                self._thermostat_entity_id,
+                self._target_temp,
+            )
             return self._target_temp
 
         return current_target_temp_high

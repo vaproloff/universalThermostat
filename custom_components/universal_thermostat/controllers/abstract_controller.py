@@ -80,7 +80,7 @@ class AbstractController(abc.ABC):
         self._hass: HomeAssistant | None = None
 
         if mode not in [HVACMode.COOL, HVACMode.HEAT]:
-            raise ValueError(f"Unsupported mode: '{mode}'")
+            raise ValueError(f"{self.name}: unsupported mode: '{mode}'")
 
     def set_thermostat(self, thermostat):
         """Set parent universal thermostat entity."""

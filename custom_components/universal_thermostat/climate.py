@@ -1009,25 +1009,31 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == HVACMode.HEAT_COOL:
             if ctrl_hvac_mode == HVACMode.HEAT:
                 return self._target_temp_low
+
             if ctrl_hvac_mode == HVACMode.COOL:
                 return self._target_temp_high
+
         elif self._hvac_mode == HVACMode.AUTO:
             if ctrl_hvac_mode == HVACMode.HEAT:
                 if self._preset_auto_heat_target is not None:
                     return self._preset_auto_heat_target
+
                 return (
                     self._target_temp
                     - self._auto_heat_delta
                     + self._preset_auto_heat_delta
                 )
+
             if ctrl_hvac_mode == HVACMode.COOL:
                 if self._preset_auto_cool_target is not None:
                     return self._preset_auto_cool_target
+
                 return (
                     self._target_temp
                     + self._auto_cool_delta
                     + self._preset_auto_cool_delta
                 )
+
         else:
             return self._target_temp
 
@@ -1042,7 +1048,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to get template info: %s.\nError: %s",
+                    "%s: unable to get auto_cool_delta template info: %s. Error: %s",
+                    self.entity_id,
                     self._auto_cool_delta_template,
                     e,
                 )
@@ -1056,7 +1063,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 )
             except (TemplateError, TypeError) as e:
                 _LOGGER.warning(
-                    "Unable to get template info: %s.\nError: %s",
+                    "%s: unable to get auto_heat_delta template info: %s. Error: %s",
+                    self.entity_id,
                     self._auto_heat_delta_template,
                     e,
                 )
@@ -1130,13 +1138,21 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             match self._last_active_hvac_mode:
                 case HVACMode.COOL:
                     self._target_temp_high = self._target_temp
-                    self._target_temp_low = self._target_temp - self._auto_heat_delta
+                    self._target_temp_low = self._round_to_target_precision(
+                        self._target_temp - self._auto_heat_delta
+                    )
                 case HVACMode.HEAT:
                     self._target_temp_low = self._target_temp
-                    self._target_temp_high = self._target_temp + self._auto_cool_delta
+                    self._target_temp_high = self._round_to_target_precision(
+                        self._target_temp + self._auto_cool_delta
+                    )
                 case HVACMode.AUTO:
-                    self._target_temp_low = self._target_temp - self._auto_heat_delta
-                    self._target_temp_high = self._target_temp + self._auto_cool_delta
+                    self._target_temp_low = self._round_to_target_precision(
+                        self._target_temp - self._auto_heat_delta
+                    )
+                    self._target_temp_high = self._round_to_target_precision(
+                        self._target_temp + self._auto_cool_delta
+                    )
 
         elif (
             new_hvac_mode in (HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO)
@@ -1190,6 +1206,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 self.preset_modes,
             )
             return
+
         if preset_mode == self.preset_mode:
             _LOGGER.info(
                 "%s: no need to change preset: %s already set",
@@ -1274,7 +1291,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_sensor_changed(self, event) -> None:
         """Handle temperature changes."""
-        new_state = event.data.get("new_state")
+        new_state: State | None = event.data.get("new_state")
         _LOGGER.info("%s: target sensor changed: %s", self.entity_id, new_state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
@@ -1291,7 +1308,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_template_entities_changed(self, event) -> None:
         """Handle thermostat template entities changes."""
-        new_state = event.data.get("new_state")
+        new_state: State | None = event.data.get("new_state")
         entity_id = event.data.get("entity_id")
         _LOGGER.info(
             "%s: thermostat template entity %s changed", self.entity_id, entity_id
@@ -1304,7 +1321,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_controller_template_entities_changed(self, event) -> None:
         """Handle controller template entities changes."""
-        new_state = event.data.get("new_state")
+        new_state: State | None = event.data.get("new_state")
         entity_id = event.data.get("entity_id")
         _LOGGER.info(
             "%s: controller template entity %s changed", self.entity_id, entity_id
@@ -1327,9 +1344,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             if math.isnan(self._cur_temp) or math.isinf(self._cur_temp):
                 raise ValueError(f"Sensor has illegal value {temp}")
 
-        except (ValueError, TypeError) as ex:
+        except (ValueError, TypeError) as e:
             self._cur_temp = None
-            _LOGGER.error("%s: unable to update from sensor: %s", self.entity_id, ex)
+            _LOGGER.error("%s: unable to update from sensor: %s", self.entity_id, e)
 
     def _set_support_flags(self) -> None:
         """Set support flags based on configuration."""
@@ -1360,6 +1377,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
                 if self._hvac_mode != HVACMode.OFF:
                     self._last_active_hvac_mode = self._hvac_mode
+
             elif self._hvac_mode == HVACMode.OFF:
                 # Skip control, last `OFF` was already processed
                 return
