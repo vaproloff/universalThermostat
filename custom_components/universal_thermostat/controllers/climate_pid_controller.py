@@ -1,7 +1,9 @@
 """Support for climate controllers with PID."""
 
+from collections.abc import Mapping
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
@@ -21,6 +23,8 @@ from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import (
+    CONF_PID_MAX,
+    CONF_PID_MIN,
     REASON_KEEP_ALIVE,
     REASON_THERMOSTAT_NOT_RUNNING,
     REASON_THERMOSTAT_STOP,
@@ -61,6 +65,19 @@ class ClimatePidController(AbstractPidController):
         )
         self._min_output_template = output_min_template
         self._max_output_template = output_max_template
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return controller's extra attributes for thermostat entity."""
+        attrs = super().extra_state_attributes or {}
+        attrs.update(
+            {
+                CONF_PID_MAX: self._max_output,
+                CONF_PID_MIN: self._min_output,
+            }
+        )
+
+        return attrs
 
     @property
     def _min_output(self) -> float | None:

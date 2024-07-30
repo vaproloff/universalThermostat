@@ -1,7 +1,9 @@
 """Support for climate switch controllers."""
 
+from collections.abc import Mapping
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
@@ -21,7 +23,7 @@ from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import condition
 from homeassistant.helpers.template import RenderInfo, Template
 
-from ..const import DEFAULT_CLIMATE_TEMP_DELTA
+from ..const import CONF_CLIMATE_TEMP_DELTA, DEFAULT_CLIMATE_TEMP_DELTA
 from . import SwitchController
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,7 +58,17 @@ class ClimateSwitchController(SwitchController):
         self._temp_delta_template = temp_delta_template
 
     @property
-    def temp_delta(self) -> float | None:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return controller's extra attributes for thermostat entity."""
+        attrs = super().extra_state_attributes or {}
+
+        if self._temp_delta != DEFAULT_CLIMATE_TEMP_DELTA:
+            attrs[CONF_CLIMATE_TEMP_DELTA] = self._temp_delta
+
+        return attrs
+
+    @property
+    def _temp_delta(self) -> float | None:
         """Returns Temperature Delta."""
         if self._temp_delta_template is None:
             _LOGGER.warning(
@@ -250,9 +262,9 @@ class ClimateSwitchController(SwitchController):
 
     async def _async_set_temperature(self, target_temp: float, reason):
         if self.mode == HVACMode.COOL:
-            target_temp -= self.temp_delta
+            target_temp -= self._temp_delta
         else:
-            target_temp += self.temp_delta
+            target_temp += self._temp_delta
 
         if None not in (self._target_entity_min_temp, self._target_entity_max_temp):
             target_temp = min(

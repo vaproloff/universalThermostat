@@ -67,9 +67,7 @@ class PwmSwitchPidController(AbstractPidController):
         self._pwm_value_attr_name = target_entity_name + PWM_SWITCH_ATTR_PWM_VALUE
 
         self._pwm_control_period = self._pwm_period / PWM_SWITCH_MAX_VALUE
-
-        if self._pwm_control_period < timedelta(seconds=1):
-            self._pwm_control_period = timedelta(seconds=1)
+        self._pwm_control_period = max(self._pwm_control_period, timedelta(seconds=1))
 
         self._last_control_time: datetime | None = None
         self._last_control_state: str | None = None

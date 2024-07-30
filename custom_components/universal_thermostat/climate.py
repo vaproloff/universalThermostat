@@ -623,7 +623,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Provides extra attributes."""
-        attrs = {}
+        attrs = {
+            CONF_AUTO_COOL_DELTA: self._auto_cool_delta,
+            CONF_AUTO_HEAT_DELTA: self._auto_heat_delta,
+        }
+
         for controller in self._controllers:
             extra_controller_attrs = controller.extra_state_attributes
             if extra_controller_attrs:

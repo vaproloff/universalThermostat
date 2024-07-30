@@ -1,7 +1,9 @@
 """Support for simple switch controllers."""
 
+from collections.abc import Mapping
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.const import (
@@ -17,6 +19,9 @@ from homeassistant.helpers import condition
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import (
+    CONF_COLD_TOLERANCE,
+    CONF_HOT_TOLERANCE,
+    CONF_MIN_DUR,
     DEFAULT_COLD_TOLERANCE,
     DEFAULT_HOT_TOLERANCE,
     REASON_KEEP_ALIVE,
@@ -49,7 +54,23 @@ class SwitchController(AbstractController):
         self._min_cycle_duration = min_cycle_duration
 
     @property
-    def cold_tolerance(self) -> float:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return controller's extra attributes for thermostat entity."""
+        attrs = super().extra_state_attributes or {}
+        attrs.update(
+            {
+                CONF_COLD_TOLERANCE: self._cold_tolerance,
+                CONF_HOT_TOLERANCE: self._hot_tolerance,
+            }
+        )
+
+        if self._min_cycle_duration is not None:
+            attrs[CONF_MIN_DUR] = self._min_cycle_duration
+
+        return attrs
+
+    @property
+    def _cold_tolerance(self) -> float:
         """Returns Cold tolerance."""
         if self._cold_tolerance_template is None:
             _LOGGER.debug(
@@ -89,7 +110,7 @@ class SwitchController(AbstractController):
             return float(DEFAULT_COLD_TOLERANCE)
 
     @property
-    def hot_tolerance(self) -> float:
+    def _hot_tolerance(self) -> float:
         """Returns Hot tolerance."""
         if self._hot_tolerance_template is None:
             _LOGGER.warning(
@@ -248,8 +269,8 @@ class SwitchController(AbstractController):
             if not long_enough:
                 return
 
-        too_cold = cur_temp <= target_temp - self.cold_tolerance
-        too_hot = cur_temp >= target_temp + self.hot_tolerance
+        too_cold = cur_temp <= target_temp - self._cold_tolerance
+        too_hot = cur_temp >= target_temp + self._hot_tolerance
 
         need_turn_on = (too_hot and self._mode == HVACMode.COOL) or (
             too_cold and self._mode == HVACMode.HEAT
@@ -270,8 +291,8 @@ class SwitchController(AbstractController):
             self._is_on,
             cur_temp,
             target_temp,
-            self.cold_tolerance,
-            self.hot_tolerance,
+            self._cold_tolerance,
+            self._hot_tolerance,
             reason,
         )
 

@@ -1,7 +1,9 @@
 """Support for switch+number controllers with PID."""
 
+from collections.abc import Mapping
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.components.input_number import (
@@ -23,6 +25,8 @@ from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
 from ..const import (
+    CONF_PID_MAX,
+    CONF_PID_MIN,
     REASON_KEEP_ALIVE,
     REASON_THERMOSTAT_NOT_RUNNING,
     REASON_THERMOSTAT_STOP,
@@ -67,6 +71,19 @@ class NumberPidController(AbstractPidController):
         self._max_output_template = output_max_template
         self._switch_entity_id = switch_entity_id
         self._switch_inverted = switch_inverted
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return controller's extra attributes for thermostat entity."""
+        attrs = super().extra_state_attributes or {}
+        attrs.update(
+            {
+                CONF_PID_MAX: self._max_output,
+                CONF_PID_MIN: self._min_output,
+            }
+        )
+
+        return attrs
 
     @property
     def _min_output(self) -> float | None:
