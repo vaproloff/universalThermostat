@@ -16,6 +16,7 @@ from ..const import (
     CONF_PID_KD,
     CONF_PID_KI,
     CONF_PID_KP,
+    CONF_PID_SAMPLE_PERIOD,
     DEFAULT_PID_KD,
     DEFAULT_PID_KI,
     DEFAULT_PID_KP,
@@ -59,11 +60,19 @@ class AbstractPidController(AbstractController, abc.ABC):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return controller's extra attributes for thermostat entity."""
-        return {
-            CONF_PID_KP: self.pid_kp,
-            CONF_PID_KI: self.pid_ki,
-            CONF_PID_KD: self.pid_kd,
-        }
+        attrs = super().extra_state_attributes or {}
+        attrs.update(
+            {
+                CONF_PID_KP: self.pid_kp,
+                CONF_PID_KI: self.pid_ki,
+                CONF_PID_KD: self.pid_kd,
+            }
+        )
+
+        if self._pid_sample_period:
+            attrs[CONF_PID_SAMPLE_PERIOD] = self._pid_sample_period
+
+        return attrs
 
     @property
     def pid_kp(self) -> float:

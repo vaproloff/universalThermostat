@@ -6,11 +6,11 @@ from datetime import timedelta
 import logging
 from typing import Any, final
 
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
 
-from ..const import REASON_KEEP_ALIVE
+from ..const import CONF_INVERTED, REASON_KEEP_ALIVE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,7 +93,14 @@ class AbstractController(abc.ABC):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return controller's extra attributes for thermostat entity."""
-        return None
+        attrs = {
+            ATTR_HVAC_MODE: self._mode,
+        }
+
+        if self._inverted:
+            attrs[CONF_INVERTED] = self._inverted
+
+        return attrs
 
     @property
     @final
