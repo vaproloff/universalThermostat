@@ -448,12 +448,12 @@ class PresetController:
         self._preset_away: Preset | None = None
         self._preset_eco: Preset | None = None
         self._preset_mode: str = PRESET_NONE
-        self._preset_modes = [PRESET_NONE]
+        self._preset_modes: list[str] = [PRESET_NONE]
         self._saved_hvac_mode: HVACMode | None = None
-        self._saved_target_temp: float = None
-        self._saved_target_temp_low: float = None
-        self._saved_target_temp_high: float = None
-        self._thermostat_entity_id = None
+        self._saved_target_temp: float | None = None
+        self._saved_target_temp_low: float | None = None
+        self._saved_target_temp_high: float | None = None
+        self._thermostat_entity_id: str | None = None
 
     @property
     def preset_mode(self):

@@ -769,7 +769,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     def _auto_heat_delta(self) -> float | None:
         """Returns Temperature Delta for heaters in Auto mode."""
         if self._auto_heat_delta_template is None:
-            _LOGGER.debug(
+            _LOGGER.warning(
                 "%s: auto_heat_delta template is none. Return default: %s",
                 self.entity_id,
                 DEFAULT_AUTO_HEAT_DELTA,
@@ -1087,7 +1087,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         if hvac_mode == self._hvac_mode:
-            _LOGGER.debug(
+            _LOGGER.info(
                 "%s: no need to control. HVAC mode %s already set",
                 self.entity_id,
                 hvac_mode,
@@ -1095,7 +1095,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         if self._preset_ctrl is not None:
-            _LOGGER.debug(
+            _LOGGER.info(
                 "%s: HVAC mode is to be changed. Resetting preset to None",
                 self.entity_id,
             )
@@ -1135,6 +1135,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             new_hvac_mode == HVACMode.HEAT_COOL
             and self._last_active_hvac_mode != HVACMode.HEAT_COOL
         ):
+            _LOGGER.info(
+                "%s: hvac_mode changed to %s: calculating ranged target temperatures",
+                self.entity_id,
+                new_hvac_mode,
+            )
             match self._last_active_hvac_mode:
                 case HVACMode.COOL:
                     self._target_temp_high = self._target_temp
@@ -1158,6 +1163,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             new_hvac_mode in (HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO)
             and self._last_active_hvac_mode == HVACMode.HEAT_COOL
         ):
+            _LOGGER.info(
+                "%s: hvac_mode changed to %s: calculating target temperature",
+                self.entity_id,
+                new_hvac_mode,
+            )
             match new_hvac_mode:
                 case HVACMode.COOL:
                     self._target_temp = self._target_temp_high
@@ -1226,7 +1236,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         new_hvac_mode = self._preset_ctrl.get_hvac_mode(self._hvac_mode)
         if new_hvac_mode in self._hvac_list and self._hvac_mode != new_hvac_mode:
-            _LOGGER.debug(
+            _LOGGER.info(
                 "%s: preset %s settings needs to change hvac mode to %s",
                 self.entity_id,
                 preset_mode,
@@ -1244,7 +1254,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp, float)
                 and self._target_temp != new_target_temp
             ):
-                _LOGGER.debug(
+                _LOGGER.info(
                     "%s: preset %s settings needs to change target temperature to %s",
                     self.entity_id,
                     preset_mode,
@@ -1260,7 +1270,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp_low, float)
                 and self._target_temp_low != new_target_temp_low
             ):
-                _LOGGER.debug(
+                _LOGGER.info(
                     "%s: preset %s settings needs to change low target temperature to %s",
                     self.entity_id,
                     preset_mode,
@@ -1275,7 +1285,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp_high, float)
                 and self._target_temp_high != new_target_temp_high
             ):
-                _LOGGER.debug(
+                _LOGGER.info(
                     "%s: preset %s settings needs to change high target temperature to %s",
                     self.entity_id,
                     preset_mode,
@@ -1292,10 +1302,21 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def _async_sensor_changed(self, event) -> None:
         """Handle temperature changes."""
         new_state: State | None = event.data.get("new_state")
-        _LOGGER.info("%s: target sensor changed: %s", self.entity_id, new_state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
+        old_state: State | None = event.data.get("old_state")
+        if old_state is not None and old_state == new_state:
+            _LOGGER.info(
+                "%s: target sensor not changed (%s) - no need to control",
+                self.entity_id,
+                new_state,
+            )
+            return
+
+        _LOGGER.info(
+            "%s: target sensor changed (%s -> %s)", self.entity_id, old_state, new_state
+        )
         await self._async_update_temp(new_state.state)
 
         await self._async_control(reason=REASON_THERMOSTAT_SENSOR_CHANGED)
@@ -1309,26 +1330,54 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def _async_template_entities_changed(self, event) -> None:
         """Handle thermostat template entities changes."""
         new_state: State | None = event.data.get("new_state")
-        entity_id = event.data.get("entity_id")
-        _LOGGER.info(
-            "%s: thermostat template entity %s changed", self.entity_id, entity_id
-        )
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
+        entity_id = event.data.get("entity_id")
+        old_state: State | None = event.data.get("old_state")
+        if old_state is not None and old_state == new_state:
+            _LOGGER.info(
+                "%s: thermostat template entity %s not changed (%s) - no need to control",
+                self.entity_id,
+                entity_id,
+                new_state,
+            )
+            return
+
+        _LOGGER.info(
+            "%s: thermostat template entity %s changed (%s -> %s)",
+            self.entity_id,
+            entity_id,
+            old_state,
+            new_state,
+        )
         await self._async_control(reason=REASON_TEMPLATE_ENTITY_CHANGED)
         self.async_write_ha_state()
 
     async def _async_controller_template_entities_changed(self, event) -> None:
         """Handle controller template entities changes."""
         new_state: State | None = event.data.get("new_state")
-        entity_id = event.data.get("entity_id")
-        _LOGGER.info(
-            "%s: controller template entity %s changed", self.entity_id, entity_id
-        )
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
+        entity_id = event.data.get("entity_id")
+        old_state: State | None = event.data.get("old_state")
+        if old_state is not None and old_state == new_state:
+            _LOGGER.info(
+                "%s: controller template entity %s not changed (%s) - no need to control",
+                self.entity_id,
+                entity_id,
+                new_state,
+            )
+            return
+
+        _LOGGER.info(
+            "%s: controller template entity %s changed (%s -> %s)",
+            self.entity_id,
+            entity_id,
+            old_state,
+            new_state,
+        )
         await self._async_control(reason=REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED)
         self.async_write_ha_state()
 
@@ -1368,7 +1417,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         """Call controllers."""
         async with self._temp_lock:
             if self._last_async_control_hvac_mode != self._hvac_mode:
-                _LOGGER.debug(
+                _LOGGER.info(
                     "%s: HVAC mode changed: %s -> %s",
                     self.entity_id,
                     self._last_async_control_hvac_mode,
@@ -1396,7 +1445,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                         not in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
                         and controller.mode == HVACMode.HEAT
                     ):
-                        _LOGGER.debug(
+                        _LOGGER.info(
                             "%s: stopping %s, %s",
                             self.entity_id,
                             controller.name,
@@ -1413,7 +1462,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
                     and controller.mode == HVACMode.HEAT
                 ):
-                    _LOGGER.debug(
+                    _LOGGER.info(
                         "%s: starting %s, %s",
                         self.entity_id,
                         controller.name,
