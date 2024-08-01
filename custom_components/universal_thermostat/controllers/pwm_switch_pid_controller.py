@@ -47,6 +47,7 @@ class PwmSwitchPidController(AbstractPidController):
         pid_sample_period: timedelta,
         inverted: bool,
         keep_alive: timedelta | None,
+        ignore_windows: bool,
         pwm_period: timedelta,
     ) -> None:
         """Initialize the controller."""
@@ -60,6 +61,7 @@ class PwmSwitchPidController(AbstractPidController):
             pid_sample_period,
             inverted,
             keep_alive,
+            ignore_windows,
         )
         self._pwm_period = pwm_period
         self._pwm_value: int | None = None

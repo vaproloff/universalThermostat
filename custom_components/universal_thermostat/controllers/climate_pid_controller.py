@@ -48,6 +48,7 @@ class ClimatePidController(AbstractPidController):
         pid_sample_period: timedelta,
         inverted: bool,
         keep_alive: timedelta | None,
+        ignore_windows: bool,
         output_min_template: Template,
         output_max_template: Template,
     ) -> None:
@@ -62,6 +63,7 @@ class ClimatePidController(AbstractPidController):
             pid_sample_period,
             inverted,
             keep_alive,
+            ignore_windows,
         )
         self._min_output_template = output_min_template
         self._max_output_template = output_max_template

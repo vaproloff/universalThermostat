@@ -42,6 +42,7 @@ class ClimateSwitchController(SwitchController):
         temp_delta_template: Template | None,
         inverted: bool,
         keep_alive: timedelta | None,
+        ignore_windows: bool,
         min_cycle_duration,
     ) -> None:
         """Initialize the controller."""
@@ -53,6 +54,7 @@ class ClimateSwitchController(SwitchController):
             hot_tolerance_template,
             inverted,
             keep_alive,
+            ignore_windows,
             min_cycle_duration,
         )
         self._temp_delta_template = temp_delta_template

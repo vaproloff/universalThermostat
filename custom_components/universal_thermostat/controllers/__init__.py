@@ -5,4 +5,5 @@ from .abstract_pid_controller import AbstractPidController
 from .pwm_switch_pid_controller import PwmSwitchPidController
 from .climate_pid_controller import ClimatePidController
 from .number_pid_controller import NumberPidController
+from .window_controller import WindowController
 from .preset_controller import PresetController

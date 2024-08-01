@@ -68,6 +68,7 @@ class AbstractController(abc.ABC):
         target_entity_id: str,
         inverted: bool,
         keep_alive: timedelta | None,
+        ignore_windows: bool,
     ) -> None:
         """Initialize the controller."""
         self._thermostat: Thermostat | None = None
@@ -76,6 +77,7 @@ class AbstractController(abc.ABC):
         self._target_entity_id = target_entity_id
         self._inverted = inverted
         self._keep_alive = keep_alive
+        self._ignore_windows = ignore_windows
         self.__running = False
         self._hass: HomeAssistant | None = None
 
@@ -122,6 +124,11 @@ class AbstractController(abc.ABC):
     def is_active(self) -> bool:
         """Is controller entity HVAC active."""
         return self._is_on
+
+    @property
+    def ignore_windows(self) -> bool:
+        """Is controller ignore windows openings/closings."""
+        return self._ignore_windows
 
     async def async_added_to_hass(self, hass: HomeAssistant, attrs: Mapping[str, Any]):
         """Add controller when adding thermostat entity."""

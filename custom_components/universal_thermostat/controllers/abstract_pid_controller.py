@@ -45,9 +45,12 @@ class AbstractPidController(AbstractController, abc.ABC):
         pid_sample_period: timedelta | None,
         inverted: bool,
         keep_alive: timedelta | None,
+        ignore_windows: bool,
     ) -> None:
         """Initialize the controller."""
-        super().__init__(name, mode, target_entity_id, inverted, keep_alive)
+        super().__init__(
+            name, mode, target_entity_id, inverted, keep_alive, ignore_windows
+        )
         self._pid_kp_template = pid_kp_template
         self._pid_ki_template = pid_ki_template
         self._pid_kd_template = pid_kd_template

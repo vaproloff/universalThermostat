@@ -9,6 +9,7 @@ from typing import Any
 import voluptuous as vol
 from voluptuous import ALLOW_EXTRA
 
+from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.climate import (
     ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_HIGH,
@@ -27,6 +28,7 @@ from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import (
+    ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     CONF_ENTITY_ID,
     CONF_NAME,
@@ -61,6 +63,7 @@ from .const import (
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_LAST_ASYNC_CONTROL_HVAC_MODE,
     ATTR_PRESET_NONE_SAVED_STATE,
+    ATTR_TIMEOUT,
     CONF_AUTO_COOL_DELTA,
     CONF_AUTO_HEAT_DELTA,
     CONF_CLIMATE_TEMP_DELTA,
@@ -69,6 +72,7 @@ from .const import (
     CONF_HEAT_COOL_DISABLED,
     CONF_HEATER,
     CONF_HOT_TOLERANCE,
+    CONF_IGNORE_WINDOWS,
     CONF_INITIAL_HVAC_MODE,
     CONF_INVERTED,
     CONF_KEEP_ALIVE,
@@ -101,6 +105,7 @@ from .const import (
     CONF_TARGET_TEMP_HIGH,
     CONF_TARGET_TEMP_LOW,
     CONF_TEMP_STEP,
+    CONF_WINDOW,
     DEFAULT_AUTO_COOL_DELTA,
     DEFAULT_AUTO_HEAT_DELTA,
     DEFAULT_COLD_TOLERANCE,
@@ -132,6 +137,7 @@ from .controllers import (
     PresetController,
     PwmSwitchPidController,
     SwitchController,
+    WindowController,
 )
 
 SUPPORTED_TARGET_DOMAINS = [
@@ -140,6 +146,12 @@ SUPPORTED_TARGET_DOMAINS = [
     CLIMATE_DOMAIN,
     NUMBER_DOMAIN,
     INPUT_NUMBER_DOMAIN,
+]
+
+SUPPORTED_WINDOW_DOMAINS = [
+    BINARY_SENSOR_DOMAIN,
+    INPUT_BOOLEAN_DOMAIN,
+    SWITCH_DOMAIN,
 ]
 
 _LOGGER = logging.getLogger(__name__)
@@ -152,6 +164,7 @@ CTRL_SCHEMA_COMMON = vol.Schema(
         vol.Optional(CONF_KEEP_ALIVE, default=None): vol.Any(
             None, cv.positive_time_period
         ),
+        vol.Optional(CONF_IGNORE_WINDOWS, default=False): bool,
     }
 )
 
@@ -278,6 +291,16 @@ PRESET_SCHEMA_TARGET_TEMP = vol.All(
     ),
 )
 
+WINDOW_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
+        vol.Optional(ATTR_TIMEOUT, default=None): vol.Any(
+            cv.positive_time_period, None
+        ),
+        vol.Optional(CONF_INVERTED, default=False): bool,
+    }
+)
+
 PRESET_SCHEMA = vol.Schema(
     {
         vol.Any(CONF_PRESET_SLEEP, CONF_PRESET_AWAY, CONF_PRESET_ECO): vol.Any(
@@ -298,6 +321,10 @@ DATA_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
         ),
         vol.Optional(CONF_COOLER): vol.Any(
             _cv_controller_target, [_cv_controller_target]
+        ),
+        vol.Optional(CONF_WINDOW): vol.Any(
+            cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
+            [cv.entity_domain(SUPPORTED_WINDOW_DOMAINS), [WINDOW_SCHEMA]],
         ),
         vol.Optional(CONF_PRESETS): PRESET_SCHEMA,
         vol.Required(CONF_SENSOR): cv.entity_id,
@@ -346,6 +373,7 @@ def _create_controllers(
         entity_id = conf[CONF_ENTITY_ID]
         inverted = conf[CONF_INVERTED]
         keep_alive = conf[CONF_KEEP_ALIVE]
+        ignore_windows = conf[CONF_IGNORE_WINDOWS]
 
         domain = split_entity_id(entity_id)[0]
 
@@ -363,6 +391,7 @@ def _create_controllers(
                     conf[CONF_PID_SAMPLE_PERIOD],
                     inverted,
                     keep_alive,
+                    ignore_windows,
                     conf[CONF_PWM_SWITCH_PERIOD],
                 )
             else:
@@ -378,6 +407,7 @@ def _create_controllers(
                     hot_tolerance,
                     inverted,
                     keep_alive,
+                    ignore_windows,
                     min_duration,
                 )
 
@@ -393,6 +423,7 @@ def _create_controllers(
                     conf[CONF_PID_SAMPLE_PERIOD],
                     inverted,
                     keep_alive,
+                    ignore_windows,
                     conf[CONF_PID_MIN],
                     conf[CONF_PID_MAX],
                 )
@@ -411,6 +442,7 @@ def _create_controllers(
                     temp_delta,
                     inverted,
                     keep_alive,
+                    ignore_windows,
                     min_duration,
                 )
 
@@ -425,6 +457,7 @@ def _create_controllers(
                 conf[CONF_PID_SAMPLE_PERIOD],
                 inverted,
                 keep_alive,
+                ignore_windows,
                 conf[CONF_PID_MIN],
                 conf[CONF_PID_MAX],
                 conf[CONF_PID_SWITCH_ENTITY_ID],
@@ -483,6 +516,9 @@ async def async_setup_platform(
         auto_cool_delta = config.get(CONF_AUTO_COOL_DELTA)
         auto_heat_delta = config.get(CONF_AUTO_HEAT_DELTA)
 
+    windows = config.get(CONF_WINDOW)
+    window_contoller = WindowController(windows) if windows else None
+
     presets = config.get(CONF_PRESETS)
     preset_contoller = PresetController(presets) if presets else None
 
@@ -507,6 +543,7 @@ async def async_setup_platform(
                 unit,
                 unique_id,
                 object_id,
+                window_contoller,
                 preset_contoller,
             )
         ]
@@ -536,6 +573,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         unit: UnitOfTemperature,
         unique_id: str | None,
         object_id: str | None,
+        window_contoller: WindowController | None,
         preset_controller: PresetController | None,
     ) -> None:
         """Initialize the thermostat."""
@@ -561,6 +599,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._unit = unit
         self._unique_id = unique_id
         self._hvac_action: HVACAction = HVACAction.IDLE
+        self._window_ctrl = window_contoller
         self._preset_ctrl = preset_controller
         self._saved_preset_state = None
 
