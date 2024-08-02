@@ -44,6 +44,8 @@ from homeassistant.const import (
 from homeassistant.core import (
     Context,
     CoreState,
+    Event,
+    EventStateChangedData,
     HomeAssistant,
     State,
     callback,
@@ -52,7 +54,7 @@ from homeassistant.core import (
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.template import RenderInfo, Template
@@ -105,7 +107,7 @@ from .const import (
     CONF_TARGET_TEMP_HIGH,
     CONF_TARGET_TEMP_LOW,
     CONF_TEMP_STEP,
-    CONF_WINDOW,
+    CONF_WINDOWS,
     DEFAULT_AUTO_COOL_DELTA,
     DEFAULT_AUTO_HEAT_DELTA,
     DEFAULT_COLD_TOLERANCE,
@@ -128,6 +130,7 @@ from .const import (
     REASON_THERMOSTAT_HVAC_MODE_CHANGED,
     REASON_THERMOSTAT_SENSOR_CHANGED,
     REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
+    REASON_WINDOW_ENTITY_CHANGED,
 )
 from .controllers import (
     AbstractController,
@@ -291,7 +294,7 @@ PRESET_SCHEMA_TARGET_TEMP = vol.All(
     ),
 )
 
-WINDOW_SCHEMA = vol.Schema(
+WINDOWS_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
         vol.Optional(ATTR_TIMEOUT, default=None): vol.Any(
@@ -322,9 +325,9 @@ DATA_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_COOLER): vol.Any(
             _cv_controller_target, [_cv_controller_target]
         ),
-        vol.Optional(CONF_WINDOW): vol.Any(
+        vol.Optional(CONF_WINDOWS): vol.Any(
             cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
-            [cv.entity_domain(SUPPORTED_WINDOW_DOMAINS), [WINDOW_SCHEMA]],
+            [vol.Any(cv.entity_domain(SUPPORTED_WINDOW_DOMAINS), WINDOWS_SCHEMA)],
         ),
         vol.Optional(CONF_PRESETS): PRESET_SCHEMA,
         vol.Required(CONF_SENSOR): cv.entity_id,
@@ -516,8 +519,8 @@ async def async_setup_platform(
         auto_cool_delta = config.get(CONF_AUTO_COOL_DELTA)
         auto_heat_delta = config.get(CONF_AUTO_HEAT_DELTA)
 
-    windows = config.get(CONF_WINDOW)
-    window_contoller = WindowController(windows) if windows else None
+    windows = config.get(CONF_WINDOWS)
+    window_contoller = WindowController(hass, windows) if windows else None
 
     presets = config.get(CONF_PRESETS)
     preset_contoller = PresetController(presets) if presets else None
@@ -928,6 +931,15 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     self.hass,
                     controller.get_used_template_entity_ids(),
                     self._async_controller_template_entities_changed,
+                )
+            )
+
+        if self._window_ctrl is not None:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass,
+                    self._window_ctrl.entity_ids,
+                    self._async_window_entities_changed,
                 )
             )
 
@@ -1342,23 +1354,26 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         await self._async_control(force=True, reason=REASON_PRESET_CHANGED)
         self.async_write_ha_state()
 
-    async def _async_sensor_changed(self, event) -> None:
+    async def _async_sensor_changed(self, event: Event[EventStateChangedData]) -> None:
         """Handle temperature changes."""
         new_state: State | None = event.data.get("new_state")
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
         old_state: State | None = event.data.get("old_state")
-        if old_state is not None and old_state == new_state:
+        if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: target sensor not changed (%s) - no need to control",
                 self.entity_id,
-                new_state,
+                new_state.state,
             )
             return
 
         _LOGGER.info(
-            "%s: target sensor changed (%s -> %s)", self.entity_id, old_state, new_state
+            "%s: target sensor changed (%s -> %s)",
+            self.entity_id,
+            old_state.state,
+            new_state.state,
         )
         await self._async_update_temp(new_state.state)
 
@@ -1370,7 +1385,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         _ = event
         self.async_write_ha_state()
 
-    async def _async_template_entities_changed(self, event) -> None:
+    async def _async_template_entities_changed(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
         """Handle thermostat template entities changes."""
         new_state: State | None = event.data.get("new_state")
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -1378,12 +1395,12 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         entity_id = event.data.get("entity_id")
         old_state: State | None = event.data.get("old_state")
-        if old_state is not None and old_state == new_state:
+        if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: thermostat template entity %s not changed (%s) - no need to control",
                 self.entity_id,
                 entity_id,
-                new_state,
+                new_state.state,
             )
             return
 
@@ -1391,13 +1408,15 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             "%s: thermostat template entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
-            old_state,
-            new_state,
+            old_state.state,
+            new_state.state,
         )
         await self._async_control(reason=REASON_TEMPLATE_ENTITY_CHANGED)
         self.async_write_ha_state()
 
-    async def _async_controller_template_entities_changed(self, event) -> None:
+    async def _async_controller_template_entities_changed(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
         """Handle controller template entities changes."""
         new_state: State | None = event.data.get("new_state")
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -1405,12 +1424,12 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         entity_id = event.data.get("entity_id")
         old_state: State | None = event.data.get("old_state")
-        if old_state is not None and old_state == new_state:
+        if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: controller template entity %s not changed (%s) - no need to control",
                 self.entity_id,
                 entity_id,
-                new_state,
+                new_state.state,
             )
             return
 
@@ -1418,10 +1437,52 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             "%s: controller template entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
-            old_state,
-            new_state,
+            old_state.state,
+            new_state.state,
         )
         await self._async_control(reason=REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED)
+        self.async_write_ha_state()
+
+    async def _async_window_entities_changed(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Handle windows entities changes."""
+        new_state: State | None = event.data.get("new_state")
+        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return
+
+        entity_id = event.data.get("entity_id")
+        old_state: State | None = event.data.get("old_state")
+        if old_state is not None and old_state.state == new_state.state:
+            _LOGGER.info(
+                "%s: window entity %s not changed (%s) - no need to control",
+                self.entity_id,
+                entity_id,
+                new_state.state,
+            )
+            return
+
+        _LOGGER.info(
+            "%s: window entity %s changed (%s -> %s)",
+            self.entity_id,
+            entity_id,
+            old_state.state,
+            new_state.state,
+        )
+        window = self._window_ctrl.find_by_entity_id(entity_id)
+        if window.timeout is not None:
+            self.async_on_remove(
+                async_call_later(
+                    self.hass,
+                    window.timeout,
+                    self._async_window_delayed_control,
+                )
+            )
+        else:
+            await self._async_window_delayed_control()
+
+    async def _async_window_delayed_control(self, time=None) -> None:
+        await self._async_control(reason=REASON_WINDOW_ENTITY_CHANGED)
         self.async_write_ha_state()
 
     @callback
@@ -1474,6 +1535,10 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 # Skip control, last `OFF` was already processed
                 return
 
+            is_windows_opened = False
+            if self._window_ctrl is not None and reason != REASON_THERMOSTAT_FIRST_RUN:
+                is_windows_opened = self._window_ctrl.is_safe_opened
+
             for controller in self._controllers:
                 controller_debug_info = (
                     f"running: {controller.running}, active: {controller.is_active}"
@@ -1481,7 +1546,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
                 if controller.running:
                     if (
-                        self._hvac_mode
+                        is_windows_opened
+                        and not controller.ignore_windows
+                        or self._hvac_mode
                         not in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
                         and controller.mode == HVACMode.COOL
                         or self._hvac_mode
@@ -1497,13 +1564,17 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                         await controller.async_stop()
                         continue
 
-                if not controller.running and (
-                    self._hvac_mode
-                    in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
-                    and controller.mode == HVACMode.COOL
-                    or self._hvac_mode
-                    in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
-                    and controller.mode == HVACMode.HEAT
+                if (
+                    not controller.running
+                    and (controller.ignore_windows or not is_windows_opened)
+                    and (
+                        self._hvac_mode
+                        in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
+                        and controller.mode == HVACMode.COOL
+                        or self._hvac_mode
+                        in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
+                        and controller.mode == HVACMode.HEAT
+                    )
                 ):
                     _LOGGER.info(
                         "%s: starting %s, %s",

@@ -13,6 +13,7 @@ Component grew out of [Smart Thermostat] from [hacker-cb], who did the great job
 - supports `heat_cool` mode with separate temperature cooling and heating setpoints
 - supports templates for configurable parameters
 - supports presets with flexible parameters
+- supports multiple windows openings (or other devices that should prevent heater/cooler working) with individual timers and inversions
 
 ### Supported domains and modes for heaters and coolers:
 
@@ -98,6 +99,14 @@ climate:
         cold_tolerance: 0.3
         hot_tolerance: 0.3
         target_temp_delta: 1.0
+        ignore_windows: true
+    windows:
+      - entity_id: switch.window_1
+        timeout:
+          seconds: 2
+      - entity_id: input_boolean.window_2
+        inverted: true
+      - binary_sensor.window_3
     presets:
       sleep:
         temp_delta: "{{ states('input_number.sleep_temp_delta') | float }}"
@@ -137,6 +146,7 @@ climate:
 * `initial_hvac_mode` _(Optional)_ - Initial HVAC mode.
 * `precision` _(Optional)_ - Precision for this device. Supported values are 0.1, 0.5 and 1.0. Default: 0.1 for Celsius and 1.0 for Fahrenheit.
 * `target_temp_step` _(Optional)_ - Temperature set point step. Supported values are 0.1, 0.5 and 1.0. Default: equals to `precision`.
+* `windows` _(Optional)_ - String, Array or Map of the window entities.
 * `presets` _(Optional)_ - Map of presets.
 
 _NOTE: at least one of `heater` or `cooler` is required._
@@ -195,7 +205,8 @@ Supported domains: `switch`,`input_boolean`
 
 * `entity_id` _(Required)_ - Target entity ID.
 * `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
-* `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while. 
+* `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.
+* `ignore_windows` _(Optional, default=false)_ - Need to ignore windows logic.
 * `min_cycle_duration` _(Optional, default=null)_ - Minimal cycle duration. Used to protect from on/off cycling.
 * `cold_tolerance` _(Optional, default=0.3)_ - Cold tolerance.
 * `hot_tolerance` _(Optional, default=0.3)_ - Hot tolerance.
@@ -217,7 +228,8 @@ Domains: `switch`,`input_boolean`.
 
 * `entity_id` _(Required)_ - Target entity ID.
 * `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
-* `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while. 
+* `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.
+* `ignore_windows` _(Optional, default=false)_ - Need to ignore windows logic.
 * `kp` _(Required)_ - PID proportional coefficient, could be a template (_Always positive, will be inverted internally for cool mode_).
 * `ki` _(Required)_ - PID integral coefficient, could be a template (_Always positive, will be inverted internally for cool mode_).
 * `kd` _(Required)_ - PID derivative coefficient, could be a template (_Always positive, will be inverted internally for cool mode_).
@@ -243,6 +255,7 @@ Domains: `climate`
 * `entity_id` _(Required)_ - Target entity ID.
 * `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
 * `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.
+* `ignore_windows` _(Optional, default=false)_ - Need to ignore windows logic.
 * `min_cycle_duration` _(Optional, default=null)_ - Minimal cycle duration. Used to protect from on/off cycling.
 * `cold_tolerance` _(Optional, default=0.3)_ - Cold tolerance. Could be a template.
 * `hot_tolerance` _(Optional, default=0.3)_ - Hot tolerance. Could be a template.
@@ -265,6 +278,7 @@ Domains: `climate`
 * `entity_id` _(Required)_ - Target entity ID.
 * `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
 * `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.
+* `ignore_windows` _(Optional, default=false)_ - Need to ignore windows logic.
 * `kp` _(Required)_ - PID proportional coefficient, could be a template (_Always positive, will be inverted internally for cool mode_).
 * `ki` _(Required)_ - PID integral coefficient, could be a template (_Always positive, will be inverted internally for cool mode_).
 * `kd` _(Required)_ - PID derivative coefficient, could be a template (_Always positive, will be inverted internally for cool mode_).
@@ -287,7 +301,8 @@ Domains: `number`,`input_number`
 
 * `entity_id` _(Required)_ - Target entity ID.
 * `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
-* `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while. 
+* `keep_alive` _(Optional)_ - Send keep-alive interval. Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.
+* `ignore_windows` _(Optional, default=false)_ - Need to ignore windows logic.
 * `pid_params` _(Required)_ - PID params comma-separated string or array in the format `Kp, Ki, Kd` (_Always positive, will be inverted internally for cool mode_).
 * `pid_sample_period` _(Optional)_ - PID constant sample time period.
 * `min` _(Optional)_ - Minimum temperature which can be set. Attribute `min` from `entity_id` will be used if not specified.
@@ -302,6 +317,61 @@ Domains: `number`,`input_number`
 * Number `entity_id` temperature will be adjusted every `pid_sample_period` it is provided, or on every `CONFIF.target_sensor` update if `pid_sample_period` is not provided.
 * `pid_params` will be inverted if `inverted` was set to `true`
 * `switch_entity_id` behavior will be inverted if `switch_inverted` was set to `true`
+
+
+## Windows
+
+Windows are optional and their logic will be available if at least one window entity added to the config.
+
+#### Supported window entities:
+
+* `switch`
+* `input_boolean`
+* `binary_sensor`
+
+#### Simple window entity:
+```yaml
+windows: binary_sensor.my_window
+```
+
+#### Entity list:
+```yaml
+windows:
+  - binary_sensor.my_window
+  - input_boolean.heater_block
+```
+
+#### Entity map:
+```yaml
+windows:
+  - entity_id: binary_sensor.my_window
+    timeout: 30
+  - entity_id: input_boolean.heater_can_work
+    inverted: true
+```
+
+#### Mixed:
+```yaml
+windows:
+  - binary_sensor.my_window_1
+  - entity_id: binary_sensor.my_window_2
+    timeout:
+      minutes: 2
+  - entity_id: input_boolean.heater_can_work
+    inverted: true
+```
+
+#### Config options
+
+* `entity_id` _(Required)_ - Target entity ID.
+* `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
+* `timeout` _(Optional, default=none)_ - time period to wait until stop/start controller after window opening/closing
+
+#### Common behavior
+* after any window entity turns `on`, controller stops working (`off` if `inverted: true`)
+* after all window entities turn `off`, controller starts working (`on` if `inverted: true`)
+* if controller has `ignore_windows` config option - it doesn't take into account windows states
+* if window has a `timeout` config option - it stops/starts controllers after time period mentioned
 
 
 ## Presets
