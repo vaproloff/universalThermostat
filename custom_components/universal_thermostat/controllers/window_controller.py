@@ -77,7 +77,6 @@ class WindowController:
     ) -> None:
         """Initialize the coordinator."""
         self._hass = hass
-        self._thermostat_entity_id = None
         self._windows: list[Window] = []
 
         if isinstance(windows, str):

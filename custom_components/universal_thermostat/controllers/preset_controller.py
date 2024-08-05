@@ -1,14 +1,9 @@
 """Thermostat presets dealing classes."""
 
 import logging
+from typing import Any
 
-from homeassistant.components.climate import (
-    PRESET_AWAY,
-    PRESET_ECO,
-    PRESET_NONE,
-    PRESET_SLEEP,
-    HVACMode,
-)
+from homeassistant.components.climate import PRESET_NONE, HVACMode
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
 
@@ -26,9 +21,9 @@ _LOGGER = logging.getLogger(__name__)
 class Preset:
     """Preset class."""
 
-    def __init__(self, thermostat_entity_id: str, preset_config: dict) -> None:
+    def __init__(self, name: str, preset_config: dict) -> None:
         """Initialize the preset."""
-        self._thermostat_entity_id = thermostat_entity_id
+        self._name: str = name
         self._temp_delta_template: Template | None = preset_config.get("temp_delta")
         self._heat_delta_template: Template | None = preset_config.get("heat_delta")
         self._cool_delta_template: Template | None = preset_config.get("cool_delta")
@@ -39,6 +34,21 @@ class Preset:
         self._cool_target_temp_template: Template | None = preset_config.get(
             "cool_target_temp"
         )
+        self._thermostat_entity_id: str | None = None
+
+    @property
+    def thermostat(self) -> str | None:
+        """Return thermostat entity id."""
+        return self._thermostat_entity_id
+
+    @thermostat.setter
+    def thermostat(self, thermostat_entity_id: str) -> None:
+        self._thermostat_entity_id = thermostat_entity_id
+
+    @property
+    def name(self):
+        """Return preset name."""
+        return self._name
 
     @property
     def _temp_delta(self) -> float | None:
@@ -440,14 +450,10 @@ class Preset:
 class PresetController:
     """Coordinator for presets if available."""
 
-    def __init__(self, presets) -> None:
+    def __init__(self, presets: dict[str, dict[str, Any]]) -> None:
         """Initialize the coordinator."""
-        self._presets = presets
+        self._presets: list[Preset] = []
         self._preset: Preset | None = None
-        self._preset_sleep: Preset | None = None
-        self._preset_away: Preset | None = None
-        self._preset_eco: Preset | None = None
-        self._preset_mode: str = PRESET_NONE
         self._preset_modes: list[str] = [PRESET_NONE]
         self._saved_hvac_mode: HVACMode | None = None
         self._saved_target_temp: float | None = None
@@ -455,10 +461,17 @@ class PresetController:
         self._saved_target_temp_high: float | None = None
         self._thermostat_entity_id: str | None = None
 
+        for preset_name, preset_conf in presets.items():
+            self._presets.append(Preset(preset_name, preset_conf))
+            self._preset_modes.append(preset_name)
+
     @property
     def preset_mode(self):
         """Return the current preset mode."""
-        return self._preset_mode
+        if self._preset:
+            return self._preset.name
+
+        return PRESET_NONE
 
     @property
     def preset_modes(self):
@@ -495,25 +508,8 @@ class PresetController:
 
     async def async_added_to_hass(self, thermostat_entity_id: str):
         """Process presets when adding thermostat entity."""
-        self._thermostat_entity_id = thermostat_entity_id
-
-        if self._presets.get(PRESET_SLEEP) is not None:
-            self._preset_sleep = Preset(
-                self._thermostat_entity_id, self._presets.get(PRESET_SLEEP)
-            )
-            self._preset_modes.append(PRESET_SLEEP)
-
-        if self._presets.get(PRESET_AWAY) is not None:
-            self._preset_away = Preset(
-                self._thermostat_entity_id, self._presets.get(PRESET_AWAY)
-            )
-            self._preset_modes.append(PRESET_AWAY)
-
-        if self._presets.get(PRESET_ECO) is not None:
-            self._preset_eco = Preset(
-                self._thermostat_entity_id, self._presets.get(PRESET_ECO)
-            )
-            self._preset_modes.append(PRESET_ECO)
+        for preset in self._presets:
+            preset.thermostat = thermostat_entity_id
 
         _LOGGER.info(
             "%s: presets ready, supported presets: %s",
@@ -523,18 +519,13 @@ class PresetController:
 
     def set_preset(self, preset_mode) -> None:
         """Set preset."""
-        if preset_mode == PRESET_SLEEP:
-            self._preset_mode = PRESET_SLEEP
-            self._preset = self._preset_sleep
-        elif preset_mode == PRESET_AWAY:
-            self._preset_mode = PRESET_AWAY
-            self._preset = self._preset_away
-        elif preset_mode == PRESET_ECO:
-            self._preset_mode = PRESET_ECO
-            self._preset = self._preset_eco
-        else:
-            self._preset_mode = PRESET_NONE
-            self._preset = None
+        if preset_mode in self._preset_modes:
+            if preset_mode == PRESET_NONE:
+                self._preset = None
+            else:
+                for preset in self._presets:
+                    if preset.name == preset_mode:
+                        self._preset = preset
 
     def get_saved(
         self,
