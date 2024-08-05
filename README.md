@@ -106,6 +106,7 @@ climate:
           seconds: 2
       - entity_id: input_boolean.window_2
         inverted: true
+        timeout: "{{ states('input_number.window_open_timeout') | float }}"
       - binary_sensor.window_3
     presets:
       sleep:
@@ -345,7 +346,7 @@ windows:
 ```yaml
 windows:
   - entity_id: binary_sensor.my_window
-    timeout: 30
+    timeout: "{{ states('input_number.window_open_timeout') | float }}"
   - entity_id: input_boolean.heater_can_work
     inverted: true
 ```
@@ -365,7 +366,7 @@ windows:
 
 * `entity_id` _(Required)_ - Target entity ID.
 * `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
-* `timeout` _(Optional, default=none)_ - time period to wait until stop/start controller after window opening/closing
+* `timeout` _(Optional, default=none)_ - time period to wait until stop/start controller after window opening/closing. Can be a template.
 
 #### Common behavior
 * after any window entity turns `on`, controller stops working (`off` if `inverted: true`)

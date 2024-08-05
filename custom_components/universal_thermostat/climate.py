@@ -297,9 +297,7 @@ PRESET_SCHEMA_TARGET_TEMP = vol.All(
 WINDOWS_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
-        vol.Optional(ATTR_TIMEOUT, default=None): vol.Any(
-            cv.positive_time_period, None
-        ),
+        vol.Optional(ATTR_TIMEOUT): vol.Any(cv.positive_time_period, cv.template),
         vol.Optional(CONF_INVERTED, default=False): bool,
     }
 )

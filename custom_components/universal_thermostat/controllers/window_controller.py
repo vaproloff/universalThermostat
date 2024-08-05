@@ -3,9 +3,13 @@
 import logging
 from typing import Any
 
+import voluptuous as vol
+
 from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import condition
+from homeassistant.exceptions import TemplateError
+from homeassistant.helpers import condition, config_validation as cv
+from homeassistant.helpers.template import Template
 
 from ..const import ATTR_TIMEOUT, CONF_INVERTED
 
@@ -34,6 +38,29 @@ class Window:
     @property
     def timeout(self):
         """Return timeout of the window."""
+        if self._timeout is not None:
+            if isinstance(self._timeout, Template):
+                try:
+                    timeout = self._timeout.async_render(parse_result=False)
+                except (TemplateError, TypeError) as e:
+                    _LOGGER.warning(
+                        "%s: unable to render window's timeout template: %s. Error: %s",
+                        self.entity_id,
+                        self._timeout,
+                        e,
+                    )
+                    return None
+
+                try:
+                    return cv.positive_time_period(timeout)
+                except vol.Invalid:
+                    _LOGGER.warning(
+                        "%s: unable to validate window's timeout template value: %s",
+                        self.entity_id,
+                        self._timeout,
+                    )
+                    return None
+
         return self._timeout
 
     @property
@@ -50,6 +77,7 @@ class WindowController:
     ) -> None:
         """Initialize the coordinator."""
         self._hass = hass
+        self._thermostat_entity_id = None
         self._windows: list[Window] = []
 
         if isinstance(windows, str):
