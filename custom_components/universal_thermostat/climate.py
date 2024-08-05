@@ -937,6 +937,15 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     self._async_window_entities_changed,
                 )
             )
+            max_windows_timeout = self._window_ctrl.max_timeout
+            if max_windows_timeout:
+                self.async_on_remove(
+                    async_call_later(
+                        self.hass,
+                        max_windows_timeout,
+                        self._async_window_delayed_control,
+                    )
+                )
 
         if self._preset_ctrl is not None:
             await self._preset_ctrl.async_added_to_hass(self.entity_id)

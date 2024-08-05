@@ -131,6 +131,15 @@ class WindowController:
 
         return False
 
+    @property
+    def max_timeout(self):
+        """Return maximum timeout of all windows."""
+        timeouts = [
+            window.timeout for window in self._windows if window.timeout is not None
+        ]
+        if timeouts:
+            return max(timeouts)
+
     def find_by_entity_id(self, entity_id: str) -> Window | None:
         """Return window with entity_id if exists."""
         for window in self._windows:
