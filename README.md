@@ -378,12 +378,17 @@ windows:
 ## Presets
 
 Presets are optional and will be available if at least one preset mode added to the config.
-All supported preset modes are equal in functionality, their behaviour depends only on used config parameters.
+All preset modes are equal in functionality, their behaviour depends only on used config parameters.
 
-#### Supported preset modes:
-* `sleep`
-* `away`
+Mapping key will be a preset name.
+Preset can have any name, but it is recommended to use defaults, that support icons and translations:
 * `eco`
+* `away`
+* `sleep`
+* `boost`
+* `comfort`
+* `home`
+* `activity`
 
 #### Common behavior
 * if any preset is active, changing `hvac_mode` manually resets current preset to `None`
@@ -393,6 +398,14 @@ All supported preset modes are equal in functionality, their behaviour depends o
 * if you want to decrease target temperature, use negative float number.
 
 ### Single temperature delta preset config:
+
+#### Config example
+
+```yaml
+presets:
+  sleep:
+    temp_delta: -1.0
+```
 
 #### Config options
 
@@ -406,6 +419,15 @@ All supported preset modes are equal in functionality, their behaviour depends o
   * `target_temp_high + temp_delta`
 
 ### Heating/cooling temperature deltas preset config:
+
+#### Config example
+
+```yaml
+presets:
+  away:
+    heat_delta: -1.0
+    cool_delta: 2.0
+```
 
 #### Config options
 
@@ -427,6 +449,17 @@ but creates additional deltas to `auto_cool_delta` and `auto_heat_delta` for `co
   * coolers' `target_temp`s will be `target_temp + auto_cool_delta + cool_delta`
 
 ### Target temperatures preset config:
+
+#### Config example
+
+```yaml
+presets:
+  eco:
+    heat_target_temp: 18.0
+    cool_target_temp: 28.0
+  comfort:
+    target_temp: 25.0
+```
 
 #### Config options
 

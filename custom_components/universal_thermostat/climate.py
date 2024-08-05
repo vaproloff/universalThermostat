@@ -91,13 +91,10 @@ from .const import (
     CONF_PID_SWITCH_ENTITY_ID,
     CONF_PID_SWITCH_INVERTED,
     CONF_PRECISION,
-    CONF_PRESET_AWAY,
     CONF_PRESET_COOL_DELTA,
     CONF_PRESET_COOL_TARGET_TEMP,
-    CONF_PRESET_ECO,
     CONF_PRESET_HEAT_DELTA,
     CONF_PRESET_HEAT_TARGET_TEMP,
-    CONF_PRESET_SLEEP,
     CONF_PRESET_TARGET_TEMP,
     CONF_PRESET_TEMP_DELTA,
     CONF_PRESETS,
@@ -304,7 +301,7 @@ WINDOWS_SCHEMA = vol.Schema(
 
 PRESET_SCHEMA = vol.Schema(
     {
-        vol.Any(CONF_PRESET_SLEEP, CONF_PRESET_AWAY, CONF_PRESET_ECO): vol.Any(
+        cv.string: vol.Any(
             PRESET_SCHEMA_TEMP_DELTA,
             PRESET_SCHEMA_HEAT_COOL_DELTA,
             PRESET_SCHEMA_TARGET_TEMP,
@@ -940,6 +937,15 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     self._async_window_entities_changed,
                 )
             )
+            max_windows_timeout = self._window_ctrl.max_timeout
+            if max_windows_timeout:
+                self.async_on_remove(
+                    async_call_later(
+                        self.hass,
+                        max_windows_timeout,
+                        self._async_window_delayed_control,
+                    )
+                )
 
         if self._preset_ctrl is not None:
             await self._preset_ctrl.async_added_to_hass(self.entity_id)
