@@ -45,10 +45,13 @@ class SwitchController(AbstractController):
         hot_tolerance_template: Template,
         inverted: bool,
         keep_alive: timedelta | None,
+        ignore_windows: bool,
         min_cycle_duration,
     ) -> None:
         """Initialize the controller."""
-        super().__init__(name, mode, target_entity_id, inverted, keep_alive)
+        super().__init__(
+            name, mode, target_entity_id, inverted, keep_alive, ignore_windows
+        )
         self._cold_tolerance_template = cold_tolerance_template
         self._hot_tolerance_template = hot_tolerance_template
         self._min_cycle_duration = min_cycle_duration

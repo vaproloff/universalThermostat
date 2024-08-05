@@ -3,6 +3,7 @@
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_LAST_ASYNC_CONTROL_HVAC_MODE = "async_control_hvac_mode"
 ATTR_PRESET_NONE_SAVED_STATE = "saved_preset_state"
+ATTR_TIMEOUT = "timeout"
 
 CONF_AUTO_COOL_DELTA = "auto_cool_delta"
 CONF_AUTO_HEAT_DELTA = "auto_heat_delta"
@@ -12,6 +13,7 @@ CONF_COOLER = "cooler"
 CONF_HEAT_COOL_DISABLED = "heat_cool_disabled"
 CONF_HEATER = "heater"
 CONF_HOT_TOLERANCE = "hot_tolerance"
+CONF_IGNORE_WINDOWS = "ignore_windows"
 CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
 CONF_INVERTED = "inverted"
 CONF_KEEP_ALIVE = "keep_alive"
@@ -44,6 +46,7 @@ CONF_PID_SAMPLE_PERIOD = "pid_sample_period"
 CONF_PID_SWITCH_ENTITY_ID = "switch_entity_id"
 CONF_PID_SWITCH_INVERTED = "switch_inverted"
 CONF_PWM_SWITCH_PERIOD = "pwm_period"
+CONF_WINDOWS = "windows"
 
 DEFAULT_AUTO_COOL_DELTA = 1.0
 DEFAULT_AUTO_HEAT_DELTA = 1.0
@@ -81,3 +84,4 @@ REASON_THERMOSTAT_NOT_RUNNING = "not_running"
 REASON_THERMOSTAT_SENSOR_CHANGED = "sensor_changed"
 REASON_THERMOSTAT_STOP = "stop"
 REASON_THERMOSTAT_TARGET_TEMP_CHANGED = "target_temp_changed"
+REASON_WINDOW_ENTITY_CHANGED = "window_entity_changed"
