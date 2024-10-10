@@ -1509,6 +1509,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             self._cur_temp = None
             return
 
+        self._cur_temp = temp
+
     def _set_support_flags(self) -> None:
         """Set support flags based on configuration."""
         if (
