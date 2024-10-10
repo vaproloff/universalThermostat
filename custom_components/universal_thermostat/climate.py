@@ -48,7 +48,6 @@ from homeassistant.core import (
     EventStateChangedData,
     HomeAssistant,
     State,
-    callback,
     split_entity_id,
 )
 from homeassistant.exceptions import TemplateError
@@ -679,6 +678,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         return attrs
 
     @property
+    def supported_features(self) -> ClimateEntityFeature:
+        """Return the list of supported features."""
+        return self._support_flags
+
+    @property
     def target_temperature_step(self) -> float | None:
         """Return the supported step of target temperature."""
         if self._target_temp_step is not None:
@@ -713,9 +717,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         return self._cur_temp
 
     @property
-    def supported_features(self) -> ClimateEntityFeature:
-        """Return the list of supported features."""
-        return self._support_flags
+    def target_temperature(self) -> float | None:
+        """Return the temperature we try to reach."""
+        return self._target_temp
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
@@ -741,11 +745,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     return HVACAction.HEATING
 
         return HVACAction.IDLE
-
-    @property
-    def target_temperature(self) -> float | None:
-        """Return the temperature we try to reach."""
-        return self._target_temp
 
     @property
     def _default_target_temp(self) -> float:
@@ -863,11 +862,13 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     def _preset_auto_heat_target(self) -> float | None:
         if self._preset_ctrl is not None and self._hvac_mode == HVACMode.AUTO:
             return self._preset_ctrl.auto_heat_target
+        return None
 
     @property
     def _preset_auto_cool_target(self) -> float | None:
         if self._preset_ctrl is not None and self._hvac_mode == HVACMode.AUTO:
             return self._preset_ctrl.auto_cool_target
+        return None
 
     @property
     def preset_mode(self) -> str | None:
@@ -882,6 +883,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         """Return a list of available preset modes."""
         if self._preset_ctrl is not None:
             return self._preset_ctrl.preset_modes
+        return None
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -955,7 +957,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             await self._async_control(reason=REASON_THERMOSTAT_FIRST_RUN)
             self.async_write_ha_state()
 
-        @callback
         async def _async_startup(*_):
             """Init on startup."""
             sensor_state: State | None = self.hass.states.get(self.sensor_entity_id)
@@ -1071,8 +1072,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
             if ctrl_hvac_mode == HVACMode.COOL:
                 return self._target_temp_high
+            return None
 
-        elif self._hvac_mode == HVACMode.AUTO:
+        if self._hvac_mode == HVACMode.AUTO:
             if ctrl_hvac_mode == HVACMode.HEAT:
                 if self._preset_auto_heat_target is not None:
                     return self._preset_auto_heat_target
@@ -1092,9 +1094,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     + self._auto_cool_delta
                     + self._preset_auto_cool_delta
                 )
+            return None
 
-        else:
-            return self._target_temp
+        return self._target_temp
 
     def _get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
@@ -1441,7 +1443,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             "%s: controller template entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
-            old_state.state,
+            old_state.state if old_state else None,
             new_state.state,
         )
         await self._async_control(reason=REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED)
@@ -1489,7 +1491,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         await self._async_control(reason=REASON_WINDOW_ENTITY_CHANGED)
         self.async_write_ha_state()
 
-    @callback
     async def _async_update_temp(self, temp) -> None:
         """Update thermostat with latest state from sensor."""
         if temp in (STATE_UNAVAILABLE, STATE_UNKNOWN, None):
@@ -1497,13 +1498,16 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         try:
-            self._cur_temp = float(temp)
-            if math.isnan(self._cur_temp) or math.isinf(self._cur_temp):
-                raise ValueError(f"Sensor has illegal value {temp}")
-
-        except (ValueError, TypeError) as e:
-            self._cur_temp = None
+            temp = float(temp)
+        except TypeError as e:
             _LOGGER.error("%s: unable to update from sensor: %s", self.entity_id, e)
+            self._cur_temp = None
+            return
+
+        if math.isnan(temp) or math.isinf(temp):
+            _LOGGER.error("%s: sensor has illegal value %s", self.entity_id, temp)
+            self._cur_temp = None
+            return
 
     def _set_support_flags(self) -> None:
         """Set support flags based on configuration."""

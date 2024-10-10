@@ -42,15 +42,10 @@ class PIDController:
     def update(self, feedback_value, in_time=None):
         """Calculate PID value for given reference feedback."""
         current_time = in_time if in_time is not None else self.current_time()
-        if self._last_time is None:
-            self._last_time = current_time
 
-        # Fill PID information
-        delta_time = current_time - self._last_time
-        if not delta_time:
-            delta_time = 1e-16
-        elif delta_time < 0:
-            return None
+        delta_time = 0
+        if self._last_time is not None:
+            delta_time = current_time - self._last_time
 
         # Return last output if sample time not met
         if (
@@ -66,9 +61,6 @@ class PIDController:
             self._last_input if self._last_input is not None else self._set_point
         )
 
-        # Calculate delta error
-        delta_error = error - last_error
-
         # Calculate P
         self._p_term = self._kp * error
 
@@ -77,7 +69,10 @@ class PIDController:
         self._i_term = self.clamp_value(self._i_term, self._output_limits)
 
         # Calculate D
-        self._d_term = self._kd * delta_error / delta_time
+        self._d_term = 0
+        if delta_time:
+            delta_error = error - last_error
+            self._d_term = self._kd * delta_error / delta_time
 
         # Compute final output
         self._output = self._p_term + self._i_term + self._d_term
