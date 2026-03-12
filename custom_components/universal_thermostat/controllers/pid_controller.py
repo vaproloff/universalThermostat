@@ -3,8 +3,6 @@
 import logging
 import time
 
-from ..const import DEFAULT_PID_MAX, DEFAULT_PID_MIN
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -17,7 +15,7 @@ class PIDController:
         ki=0.0,
         kd=0.0,
         sample_time=None,
-        output_limits=(DEFAULT_PID_MIN, DEFAULT_PID_MAX),
+        output_limits=(0, 100),
     ) -> None:
         """Initialize the PID controller."""
         self._set_point = 0
@@ -151,6 +149,7 @@ class PIDController:
 
     def reset(self):
         """Reset all PID parameters."""
+        _LOGGER.debug("PID RESET")
         self._p_term = 0
         self._i_term = 0
         self._d_term = 0

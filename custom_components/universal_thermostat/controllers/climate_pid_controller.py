@@ -5,6 +5,14 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from custom_components.universal_thermostat.const import (
+    CONF_PID_MAX,
+    CONF_PID_MIN,
+    REASON_KEEP_ALIVE,
+    REASON_THERMOSTAT_NOT_RUNNING,
+    REASON_THERMOSTAT_STOP,
+)
+
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
@@ -22,14 +30,7 @@ from homeassistant.core import State
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
-from ..const import (
-    CONF_PID_MAX,
-    CONF_PID_MIN,
-    REASON_KEEP_ALIVE,
-    REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP,
-)
-from . import AbstractPidController
+from .abstract_pid_controller import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -305,6 +306,7 @@ class ClimatePidController(AbstractPidController):
                     state.attributes.get(ATTR_TEMPERATURE),
                     e,
                 )
+        return None
 
     async def _async_turn_on(self, reason=None):
         _LOGGER.debug(

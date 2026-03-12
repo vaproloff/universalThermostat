@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+from custom_components.universal_thermostat.const import ATTR_TIMEOUT, CONF_INVERTED
 import voluptuous as vol
 
 from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
@@ -10,8 +11,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import condition, config_validation as cv
 from homeassistant.helpers.template import Template
-
-from ..const import ATTR_TIMEOUT, CONF_INVERTED
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -116,7 +115,8 @@ class WindowController:
                         STATE_ON if not window.inverted else STATE_OFF,
                         window.timeout,
                     )
-                    or not is_now_opened
+                ) or (
+                    not is_now_opened
                     and not condition.state(
                         self._hass,
                         window.entity_id,
@@ -139,9 +139,11 @@ class WindowController:
         ]
         if timeouts:
             return max(timeouts)
+        return None
 
     def find_by_entity_id(self, entity_id: str) -> Window | None:
         """Return window with entity_id if exists."""
         for window in self._windows:
             if entity_id == window.entity_id:
                 return window
+        return None

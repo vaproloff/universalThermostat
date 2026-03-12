@@ -6,37 +6,22 @@ import logging
 import math
 from typing import Any
 
-import voluptuous as vol
-from voluptuous import ALLOW_EXTRA
-
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.climate import (
     ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
-    DOMAIN as CLIMATE_DOMAIN,
     ENTITY_ID_FORMAT,
-    PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     PRESET_NONE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
-from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import (
-    ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
-    CONF_ENTITY_ID,
     CONF_NAME,
     CONF_UNIQUE_ID,
     EVENT_HOMEASSISTANT_START,
-    PRECISION_HALVES,
-    PRECISION_TENTHS,
-    PRECISION_WHOLE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfTemperature,
@@ -48,10 +33,8 @@ from homeassistant.core import (
     EventStateChangedData,
     HomeAssistant,
     State,
-    split_entity_id,
 )
 from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
@@ -60,44 +43,22 @@ from homeassistant.helpers.template import RenderInfo, Template
 from homeassistant.helpers.typing import ConfigType
 
 from . import DOMAIN, PLATFORMS
+from .config_schema import PLATFORM_SCHEMA  # noqa: F401
 from .const import (
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_LAST_ASYNC_CONTROL_HVAC_MODE,
     ATTR_PRESET_NONE_SAVED_STATE,
-    ATTR_TIMEOUT,
     CONF_AUTO_COOL_DELTA,
     CONF_AUTO_HEAT_DELTA,
-    CONF_CLIMATE_TEMP_DELTA,
-    CONF_COLD_TOLERANCE,
     CONF_COOLER,
     CONF_HEAT_COOL_DISABLED,
     CONF_HEATER,
-    CONF_HOT_TOLERANCE,
-    CONF_IGNORE_WINDOWS,
     CONF_INITIAL_HVAC_MODE,
-    CONF_INVERTED,
-    CONF_KEEP_ALIVE,
     CONF_MAX_TEMP,
-    CONF_MIN_DUR,
     CONF_MIN_TEMP,
     CONF_OBJECT_ID,
-    CONF_PID_KD,
-    CONF_PID_KI,
-    CONF_PID_KP,
-    CONF_PID_MAX,
-    CONF_PID_MIN,
-    CONF_PID_SAMPLE_PERIOD,
-    CONF_PID_SWITCH_ENTITY_ID,
-    CONF_PID_SWITCH_INVERTED,
     CONF_PRECISION,
-    CONF_PRESET_COOL_DELTA,
-    CONF_PRESET_COOL_TARGET_TEMP,
-    CONF_PRESET_HEAT_DELTA,
-    CONF_PRESET_HEAT_TARGET_TEMP,
-    CONF_PRESET_TARGET_TEMP,
-    CONF_PRESET_TEMP_DELTA,
     CONF_PRESETS,
-    CONF_PWM_SWITCH_PERIOD,
     CONF_SENSOR,
     CONF_TARGET_TEMP,
     CONF_TARGET_TEMP_HIGH,
@@ -106,14 +67,6 @@ from .const import (
     CONF_WINDOWS,
     DEFAULT_AUTO_COOL_DELTA,
     DEFAULT_AUTO_HEAT_DELTA,
-    DEFAULT_COLD_TOLERANCE,
-    DEFAULT_HOT_TOLERANCE,
-    DEFAULT_NAME,
-    DEFAULT_PID_KD,
-    DEFAULT_PID_KI,
-    DEFAULT_PID_KP,
-    DEFAULT_PID_MAX,
-    DEFAULT_PID_MIN,
     DEFAULT_PRESET_AUTO_TEMP_DELTA,
     PRESET_NONE_HVAC_MODE,
     PRESET_NONE_TARGET_TEMP,
@@ -128,348 +81,12 @@ from .const import (
     REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
     REASON_WINDOW_ENTITY_CHANGED,
 )
-from .controllers import (
-    AbstractController,
-    ClimatePidController,
-    ClimateSwitchController,
-    NumberPidController,
-    PresetController,
-    PwmSwitchPidController,
-    SwitchController,
-    WindowController,
-)
-
-SUPPORTED_TARGET_DOMAINS = [
-    SWITCH_DOMAIN,
-    INPUT_BOOLEAN_DOMAIN,
-    CLIMATE_DOMAIN,
-    NUMBER_DOMAIN,
-    INPUT_NUMBER_DOMAIN,
-]
-
-SUPPORTED_WINDOW_DOMAINS = [
-    BINARY_SENSOR_DOMAIN,
-    INPUT_BOOLEAN_DOMAIN,
-    SWITCH_DOMAIN,
-]
+from .controller_factory import create_controllers
+from .controllers.abstract_controller import AbstractController
+from .controllers.preset_controller import PresetController
+from .controllers.window_controller import WindowController
 
 _LOGGER = logging.getLogger(__name__)
-
-
-CTRL_SCHEMA_COMMON = vol.Schema(
-    {
-        vol.Required(CONF_ENTITY_ID): cv.entity_domain(SUPPORTED_TARGET_DOMAINS),
-        vol.Optional(CONF_INVERTED, default=False): bool,
-        vol.Optional(CONF_KEEP_ALIVE, default=None): vol.Any(
-            None, cv.positive_time_period
-        ),
-        vol.Optional(CONF_IGNORE_WINDOWS, default=False): bool,
-    }
-)
-
-CTRL_SCHEMA_SWITCH = CTRL_SCHEMA_COMMON.extend(
-    {
-        vol.Optional(CONF_MIN_DUR): cv.positive_time_period,
-        vol.Optional(CONF_COLD_TOLERANCE, default=DEFAULT_COLD_TOLERANCE): cv.template,
-        vol.Optional(CONF_HOT_TOLERANCE, default=DEFAULT_HOT_TOLERANCE): cv.template,
-    }
-)
-
-CTRL_SCHEMA_CLIMATE_SWITCH = CTRL_SCHEMA_SWITCH.extend(
-    {
-        vol.Optional(CONF_CLIMATE_TEMP_DELTA, default=None): vol.Any(None, cv.template),
-    }
-)
-
-CTRL_SCHEMA_PID_COMMON = CTRL_SCHEMA_COMMON.extend(
-    {
-        vol.Required(CONF_PID_KP, default=DEFAULT_PID_KP): cv.template,
-        vol.Required(CONF_PID_KI, default=DEFAULT_PID_KI): cv.template,
-        vol.Required(CONF_PID_KD, default=DEFAULT_PID_KD): cv.template,
-        vol.Optional(CONF_PID_SAMPLE_PERIOD, default=None): vol.Any(
-            None, cv.positive_time_period
-        ),
-    }
-)
-
-CTRL_SCHEMA_PWM_SWITCH = CTRL_SCHEMA_PID_COMMON.extend(
-    {
-        vol.Required(CONF_PWM_SWITCH_PERIOD): cv.positive_time_period,
-    }
-)
-
-CTRL_SCHEMA_PID_CLIMATE = CTRL_SCHEMA_PID_COMMON.extend(
-    {
-        vol.Optional(CONF_PID_MIN, default=DEFAULT_PID_MIN): cv.template,
-        vol.Optional(CONF_PID_MAX, default=DEFAULT_PID_MAX): cv.template,
-    }
-)
-
-CTRL_SCHEMA_PID_NUMBER = CTRL_SCHEMA_PID_CLIMATE.extend(
-    {
-        vol.Optional(CONF_PID_SWITCH_ENTITY_ID): cv.entity_domain(
-            [SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN]
-        ),
-        vol.Optional(CONF_PID_SWITCH_INVERTED, default=False): vol.Coerce(bool),
-    }
-)
-
-
-def _cv_controller_target(cfg: Any) -> Any:
-    entity_id: str
-
-    if isinstance(cfg, str):
-        entity_id = cfg
-        cfg = {CONF_ENTITY_ID: entity_id}
-
-    if CONF_ENTITY_ID not in cfg:
-        raise vol.Invalid(f"{CONF_ENTITY_ID} should be specified")
-
-    entity_id = cfg[CONF_ENTITY_ID]
-
-    domain = split_entity_id(entity_id)[0]
-
-    if domain in [SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN]:
-        if CONF_PID_KP in cfg:
-            return CTRL_SCHEMA_PWM_SWITCH(cfg)
-        return CTRL_SCHEMA_SWITCH(cfg)
-
-    if domain in [CLIMATE_DOMAIN]:
-        if CONF_PID_KP in cfg:
-            return CTRL_SCHEMA_PID_CLIMATE(cfg)
-        return CTRL_SCHEMA_CLIMATE_SWITCH(cfg)
-
-    if domain in [INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN]:
-        return CTRL_SCHEMA_PID_NUMBER(cfg)
-
-    raise vol.Invalid(f"{entity_id}: Unsupported domain: {domain}")
-
-
-KEY_SCHEMA = vol.Schema(
-    {
-        vol.Required(
-            vol.Any(CONF_HEATER, CONF_COOLER),
-            msg=f"Must specify at least one: '{CONF_HEATER}' or '{CONF_COOLER}'",
-        ): object
-    },
-    extra=ALLOW_EXTRA,
-)
-
-PRESET_SCHEMA_TEMP_DELTA = vol.Schema(
-    {
-        vol.Required(CONF_PRESET_TEMP_DELTA): cv.template,
-    }
-)
-
-PRESET_SCHEMA_HEAT_COOL_DELTA = vol.Schema(
-    {
-        vol.Required(CONF_PRESET_HEAT_DELTA): cv.template,
-        vol.Required(CONF_PRESET_COOL_DELTA): cv.template,
-    }
-)
-
-PRESET_SCHEMA_TARGET_TEMP = vol.All(
-    vol.Schema(
-        {
-            vol.Required(
-                vol.Any(
-                    CONF_PRESET_TARGET_TEMP,
-                    CONF_PRESET_HEAT_TARGET_TEMP,
-                    CONF_PRESET_COOL_TARGET_TEMP,
-                )
-            ): object,
-        },
-        extra=ALLOW_EXTRA,
-    ),
-    vol.Schema(
-        {
-            vol.Optional(CONF_PRESET_TARGET_TEMP): cv.template,
-            vol.Optional(CONF_PRESET_HEAT_TARGET_TEMP): cv.template,
-            vol.Optional(CONF_PRESET_COOL_TARGET_TEMP): cv.template,
-        },
-    ),
-)
-
-WINDOWS_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
-        vol.Optional(ATTR_TIMEOUT): vol.Any(cv.positive_time_period, cv.template),
-        vol.Optional(CONF_INVERTED, default=False): bool,
-    }
-)
-
-PRESET_SCHEMA = vol.Schema(
-    {
-        cv.string: vol.Any(
-            PRESET_SCHEMA_TEMP_DELTA,
-            PRESET_SCHEMA_HEAT_COOL_DELTA,
-            PRESET_SCHEMA_TARGET_TEMP,
-        )
-    }
-)
-
-DATA_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_UNIQUE_ID): cv.string,
-        vol.Optional(CONF_OBJECT_ID): cv.string,
-        vol.Optional(CONF_HEATER): vol.Any(
-            _cv_controller_target, [_cv_controller_target]
-        ),
-        vol.Optional(CONF_COOLER): vol.Any(
-            _cv_controller_target, [_cv_controller_target]
-        ),
-        vol.Optional(CONF_WINDOWS): vol.Any(
-            cv.entity_domain(SUPPORTED_WINDOW_DOMAINS),
-            [vol.Any(cv.entity_domain(SUPPORTED_WINDOW_DOMAINS), WINDOWS_SCHEMA)],
-        ),
-        vol.Optional(CONF_PRESETS): PRESET_SCHEMA,
-        vol.Required(CONF_SENSOR): cv.entity_id,
-        vol.Optional(CONF_MIN_TEMP): vol.Coerce(float),
-        vol.Optional(CONF_MAX_TEMP): vol.Coerce(float),
-        vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float),
-        vol.Optional(CONF_TARGET_TEMP_HIGH): vol.Coerce(float),
-        vol.Optional(CONF_TARGET_TEMP_LOW): vol.Coerce(float),
-        vol.Optional(
-            CONF_AUTO_COOL_DELTA, default=DEFAULT_AUTO_COOL_DELTA
-        ): cv.template,
-        vol.Optional(
-            CONF_AUTO_HEAT_DELTA, default=DEFAULT_AUTO_HEAT_DELTA
-        ): cv.template,
-        vol.Optional(CONF_HEAT_COOL_DISABLED, default=False): vol.Coerce(bool),
-        vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
-            [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
-        ),
-        vol.Optional(CONF_PRECISION): vol.In(
-            [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]
-        ),
-        vol.Optional(CONF_TEMP_STEP): vol.In(
-            [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]
-        ),
-    }
-)
-
-PLATFORM_SCHEMA = vol.All(KEY_SCHEMA, DATA_SCHEMA)
-
-
-def _create_controllers(
-    prefix: str,
-    mode: str,
-    conf_list: Any,
-) -> list[AbstractController]:
-    if conf_list is None:
-        return []
-    if not isinstance(conf_list, list):
-        conf_list = [conf_list]
-
-    controllers: list[AbstractController] = []
-
-    for controller_number, conf in enumerate(conf_list, 1):
-        name = f"{prefix}_{controller_number}"
-
-        entity_id = conf[CONF_ENTITY_ID]
-        inverted = conf[CONF_INVERTED]
-        keep_alive = conf[CONF_KEEP_ALIVE]
-        ignore_windows = conf[CONF_IGNORE_WINDOWS]
-
-        domain = split_entity_id(entity_id)[0]
-
-        controller = None
-
-        if domain in [SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN]:
-            if CONF_PID_KP in conf:
-                controller = PwmSwitchPidController(
-                    name,
-                    mode,
-                    entity_id,
-                    conf[CONF_PID_KP],
-                    conf[CONF_PID_KI],
-                    conf[CONF_PID_KD],
-                    conf[CONF_PID_SAMPLE_PERIOD],
-                    inverted,
-                    keep_alive,
-                    ignore_windows,
-                    conf[CONF_PWM_SWITCH_PERIOD],
-                )
-            else:
-                min_duration = conf.get(CONF_MIN_DUR, None)
-                cold_tolerance = conf[CONF_COLD_TOLERANCE]
-                hot_tolerance = conf[CONF_HOT_TOLERANCE]
-
-                controller = SwitchController(
-                    name,
-                    mode,
-                    entity_id,
-                    cold_tolerance,
-                    hot_tolerance,
-                    inverted,
-                    keep_alive,
-                    ignore_windows,
-                    min_duration,
-                )
-
-        elif domain in [CLIMATE_DOMAIN]:
-            if CONF_PID_KP in conf:
-                controller = ClimatePidController(
-                    name,
-                    mode,
-                    entity_id,
-                    conf[CONF_PID_KP],
-                    conf[CONF_PID_KI],
-                    conf[CONF_PID_KD],
-                    conf[CONF_PID_SAMPLE_PERIOD],
-                    inverted,
-                    keep_alive,
-                    ignore_windows,
-                    conf[CONF_PID_MIN],
-                    conf[CONF_PID_MAX],
-                )
-            else:
-                min_duration = conf.get(CONF_MIN_DUR, None)
-                cold_tolerance = conf[CONF_COLD_TOLERANCE]
-                hot_tolerance = conf[CONF_HOT_TOLERANCE]
-                temp_delta = conf[CONF_CLIMATE_TEMP_DELTA]
-
-                controller = ClimateSwitchController(
-                    name,
-                    mode,
-                    entity_id,
-                    cold_tolerance,
-                    hot_tolerance,
-                    temp_delta,
-                    inverted,
-                    keep_alive,
-                    ignore_windows,
-                    min_duration,
-                )
-
-        elif domain in [INPUT_NUMBER_DOMAIN, NUMBER_DOMAIN]:
-            controller = NumberPidController(
-                name,
-                mode,
-                entity_id,
-                conf[CONF_PID_KP],
-                conf[CONF_PID_KI],
-                conf[CONF_PID_KD],
-                conf[CONF_PID_SAMPLE_PERIOD],
-                inverted,
-                keep_alive,
-                ignore_windows,
-                conf[CONF_PID_MIN],
-                conf[CONF_PID_MAX],
-                conf[CONF_PID_SWITCH_ENTITY_ID],
-                conf[CONF_PID_SWITCH_INVERTED],
-            )
-
-        else:
-            _LOGGER.error(
-                "Unsupported %s domain: '%s' for entity %s", name, domain, entity_id
-            )
-
-        if controller:
-            controllers.append(controller)
-
-    return controllers
 
 
 async def async_setup_platform(
@@ -503,10 +120,10 @@ async def async_setup_platform(
     controllers = []
 
     if cooler_config:
-        controllers.extend(_create_controllers("cooler", HVACMode.COOL, cooler_config))
+        controllers.extend(create_controllers("cooler", HVACMode.COOL, cooler_config))
 
     if heater_config:
-        controllers.extend(_create_controllers("heater", HVACMode.HEAT, heater_config))
+        controllers.extend(create_controllers("heater", HVACMode.HEAT, heater_config))
 
     auto_cool_delta, auto_heat_delta = None, None
     if heater_config and cooler_config:
@@ -514,10 +131,10 @@ async def async_setup_platform(
         auto_heat_delta = config.get(CONF_AUTO_HEAT_DELTA)
 
     windows = config.get(CONF_WINDOWS)
-    window_contoller = WindowController(hass, windows) if windows else None
+    window_controller = WindowController(hass, windows) if windows else None
 
     presets = config.get(CONF_PRESETS)
-    preset_contoller = PresetController(presets) if presets else None
+    preset_controller = PresetController(presets) if presets else None
 
     async_add_entities(
         [
@@ -540,8 +157,8 @@ async def async_setup_platform(
                 unit,
                 unique_id,
                 object_id,
-                window_contoller,
-                preset_contoller,
+                window_controller,
+                preset_controller,
             )
         ]
     )
@@ -570,7 +187,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         unit: UnitOfTemperature,
         unique_id: str | None,
         object_id: str | None,
-        window_contoller: WindowController | None,
+        window_controller: WindowController | None,
         preset_controller: PresetController | None,
     ) -> None:
         """Initialize the thermostat."""
@@ -580,7 +197,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._hvac_mode = initial_hvac_mode
         self._last_async_control_hvac_mode = None
         self._last_active_hvac_mode = None
-        self._saved_target_temp = target_temp
         self._temp_precision = precision
         self._target_temp_step = target_temp_step
         self._hvac_list = [HVACMode.OFF]
@@ -595,8 +211,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._auto_heat_delta_template = auto_heat_delta
         self._unit = unit
         self._unique_id = unique_id
-        self._hvac_action: HVACAction = HVACAction.IDLE
-        self._window_ctrl = window_contoller
+        self._window_ctrl = window_controller
         self._preset_ctrl = preset_controller
         self._saved_preset_state = None
 
@@ -624,9 +239,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 self._hvac_list.append(HVACMode.HEAT_COOL)
 
         self._set_support_flags()
-        self._enable_turn_on_off_backwards_compatibility = (
-            False  # To be removed after deprecation period
-        )
 
     @property
     def should_poll(self) -> bool:
@@ -980,8 +592,6 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         else:
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
 
-        # Check If we have an old state
-        old_state: State | None = await self.async_get_last_state()
         if old_state is not None:
             # If we have no initial temperature, restore
             if self._target_temp_low is None:
@@ -1527,11 +1137,49 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._support_flags |= ClimateEntityFeature.TURN_OFF
         self._support_flags |= ClimateEntityFeature.TURN_ON
 
+    def _is_controller_allowed_in_mode(self, controller: AbstractController) -> bool:
+        if controller.mode == HVACMode.COOL:
+            return self._hvac_mode in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
+
+        if controller.mode == HVACMode.HEAT:
+            return self._hvac_mode in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
+
+        return False
+
+    def _should_start_controller(
+        self,
+        controller: AbstractController,
+        is_windows_opened: bool,
+    ) -> bool:
+        if controller.running:
+            return False
+
+        if is_windows_opened and not controller.ignore_windows:
+            return False
+
+        return self._is_controller_allowed_in_mode(controller)
+
+    def _should_stop_controller(
+        self,
+        controller: AbstractController,
+        is_windows_opened: bool,
+    ) -> bool:
+        if not controller.running:
+            return False
+
+        if is_windows_opened and not controller.ignore_windows:
+            return True
+
+        if not self._is_controller_allowed_in_mode(controller):
+            return True
+
+        return False
+
     async def _async_control(self, time=None, force=False, reason=None) -> None:
         """Call controllers."""
         async with self._temp_lock:
             if self._last_async_control_hvac_mode != self._hvac_mode:
-                _LOGGER.info(
+                _LOGGER.debug(
                     "%s: HVAC mode changed: %s -> %s",
                     self.entity_id,
                     self._last_async_control_hvac_mode,
@@ -1554,38 +1202,17 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     f"running: {controller.running}, active: {controller.is_active}"
                 )
 
-                if controller.running:
-                    if (
-                        is_windows_opened
-                        and not controller.ignore_windows
-                        or self._hvac_mode
-                        not in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
-                        and controller.mode == HVACMode.COOL
-                        or self._hvac_mode
-                        not in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
-                        and controller.mode == HVACMode.HEAT
-                    ):
-                        _LOGGER.info(
-                            "%s: stopping %s, %s",
-                            self.entity_id,
-                            controller.name,
-                            controller_debug_info,
-                        )
-                        await controller.async_stop()
-                        continue
-
-                if (
-                    not controller.running
-                    and (controller.ignore_windows or not is_windows_opened)
-                    and (
-                        self._hvac_mode
-                        in (HVACMode.COOL, HVACMode.HEAT_COOL, HVACMode.AUTO)
-                        and controller.mode == HVACMode.COOL
-                        or self._hvac_mode
-                        in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.AUTO)
-                        and controller.mode == HVACMode.HEAT
+                if self._should_stop_controller(controller, is_windows_opened):
+                    _LOGGER.info(
+                        "%s: stopping %s, %s",
+                        self.entity_id,
+                        controller.name,
+                        controller_debug_info,
                     )
-                ):
+                    await controller.async_stop()
+                    continue
+
+                if self._should_start_controller(controller, is_windows_opened):
                     _LOGGER.info(
                         "%s: starting %s, %s",
                         self.entity_id,

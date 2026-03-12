@@ -6,11 +6,14 @@ from datetime import timedelta
 import logging
 from typing import Any, final
 
+from custom_components.universal_thermostat.const import (
+    CONF_INVERTED,
+    REASON_KEEP_ALIVE,
+)
+
 from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
-
-from ..const import CONF_INVERTED, REASON_KEEP_ALIVE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,7 +87,7 @@ class AbstractController(abc.ABC):
         if mode not in [HVACMode.COOL, HVACMode.HEAT]:
             raise ValueError(f"{self.name}: unsupported mode: '{mode}'")
 
-    def set_thermostat(self, thermostat):
+    def set_thermostat(self, thermostat: Thermostat):
         """Set parent universal thermostat entity."""
         self._thermostat = thermostat
 

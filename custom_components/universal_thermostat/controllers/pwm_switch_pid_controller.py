@@ -5,19 +5,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    SERVICE_TURN_OFF,
-    SERVICE_TURN_ON,
-    STATE_OFF,
-    STATE_ON,
-)
-from homeassistant.core import DOMAIN as HA_DOMAIN, HomeAssistant, split_entity_id
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.template import Template
-from homeassistant.util import dt as dt_util
-
-from ..const import (
+from custom_components.universal_thermostat.const import (
     PWM_SWITCH_ATTR_LAST_CONTROL_STATE,
     PWM_SWITCH_ATTR_LAST_CONTROL_TIME,
     PWM_SWITCH_ATTR_PWM_VALUE,
@@ -28,7 +16,24 @@ from ..const import (
     REASON_THERMOSTAT_NOT_RUNNING,
     REASON_THERMOSTAT_STOP,
 )
-from . import AbstractPidController
+
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON,
+)
+from homeassistant.core import (
+    DOMAIN as HOMEASSISTANT_DOMAIN,
+    HomeAssistant,
+    split_entity_id,
+)
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.template import Template
+from homeassistant.util import dt as dt_util
+
+from .abstract_pid_controller import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -157,7 +162,7 @@ class PwmSwitchPidController(AbstractPidController):
         service = SERVICE_TURN_ON if not self._inverted else SERVICE_TURN_OFF
         service_data = {ATTR_ENTITY_ID: self._target_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,
@@ -176,7 +181,7 @@ class PwmSwitchPidController(AbstractPidController):
         service = SERVICE_TURN_OFF if not self._inverted else SERVICE_TURN_ON
         service_data = {ATTR_ENTITY_ID: self._target_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,

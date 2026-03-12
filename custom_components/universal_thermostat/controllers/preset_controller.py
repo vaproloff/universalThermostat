@@ -3,17 +3,17 @@
 import logging
 from typing import Any
 
-from homeassistant.components.climate import PRESET_NONE, HVACMode
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.template import Template
-
-from ..const import (
+from custom_components.universal_thermostat.const import (
     DEFAULT_PRESET_AUTO_TEMP_DELTA,
     PRESET_NONE_HVAC_MODE,
     PRESET_NONE_TARGET_TEMP,
     PRESET_NONE_TARGET_TEMP_HIGH,
     PRESET_NONE_TARGET_TEMP_LOW,
 )
+
+from homeassistant.components.climate import PRESET_NONE, HVACMode
+from homeassistant.exceptions import TemplateError
+from homeassistant.helpers.template import Template
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +73,7 @@ class Preset:
                     self._temp_delta_template,
                     e,
                 )
+        return None
 
     @property
     def _heat_delta(self) -> float | None:
@@ -97,6 +98,7 @@ class Preset:
                     self._heat_delta_template,
                     e,
                 )
+        return None
 
     @property
     def _cool_delta(self) -> float | None:
@@ -121,6 +123,7 @@ class Preset:
                     self._cool_delta_template,
                     e,
                 )
+        return None
 
     @property
     def _target_temp(self) -> float | None:
@@ -147,6 +150,7 @@ class Preset:
                     self._target_temp_template,
                     e,
                 )
+        return None
 
     @property
     def _heat_target_temp(self) -> float | None:
@@ -173,6 +177,7 @@ class Preset:
                     self._heat_target_temp_template,
                     e,
                 )
+        return None
 
     @property
     def _cool_target_temp(self) -> float | None:
@@ -199,6 +204,7 @@ class Preset:
                     self._cool_target_temp_template,
                     e,
                 )
+        return None
 
     def get_hvac_mode(self, current_hvac_mode):
         """Return preset HVAC mode according to preset config."""
@@ -440,11 +446,13 @@ class Preset:
         """Return auto mode heat delta according to preset config."""
         if None not in (self._heat_target_temp, self._cool_target_temp):
             return self._heat_target_temp
+        return None
 
     def get_auto_cool_target(self) -> float | None:
         """Return auto mode cool delta according to preset config."""
         if None not in (self._heat_target_temp, self._cool_target_temp):
             return self._cool_target_temp
+        return None
 
 
 class PresetController:
@@ -499,12 +507,14 @@ class PresetController:
         """Return current preset new auto heat target temperature."""
         if self._preset is not None:
             return self._preset.get_auto_heat_target()
+        return None
 
     @property
     def auto_cool_target(self) -> float | None:
         """Return current preset new auto cool target temperature."""
         if self._preset is not None:
             return self._preset.get_auto_cool_target()
+        return None
 
     async def async_added_to_hass(self, thermostat_entity_id: str):
         """Process presets when adding thermostat entity."""
@@ -552,6 +562,7 @@ class PresetController:
                 PRESET_NONE_TARGET_TEMP_LOW: self._saved_target_temp_low,
                 PRESET_NONE_TARGET_TEMP_HIGH: self._saved_target_temp_high,
             }
+        return None
 
     def reset_saved(self) -> None:
         """Reset all saved parameters after falling back from preset."""

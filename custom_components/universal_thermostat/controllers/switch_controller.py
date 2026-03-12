@@ -5,20 +5,7 @@ from datetime import timedelta
 import logging
 from typing import Any
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    SERVICE_TURN_OFF,
-    SERVICE_TURN_ON,
-    STATE_OFF,
-    STATE_ON,
-)
-from homeassistant.core import DOMAIN as HA_DOMAIN
-from homeassistant.exceptions import ConditionError, TemplateError
-from homeassistant.helpers import condition
-from homeassistant.helpers.template import RenderInfo, Template
-
-from ..const import (
+from custom_components.universal_thermostat.const import (
     CONF_COLD_TOLERANCE,
     CONF_HOT_TOLERANCE,
     CONF_MIN_DUR,
@@ -28,7 +15,21 @@ from ..const import (
     REASON_THERMOSTAT_NOT_RUNNING,
     REASON_THERMOSTAT_STOP,
 )
-from . import AbstractController
+
+from homeassistant.components.climate import HVACMode
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON,
+)
+from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
+from homeassistant.exceptions import ConditionError, TemplateError
+from homeassistant.helpers import condition
+from homeassistant.helpers.template import RenderInfo, Template
+
+from .abstract_controller import AbstractController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ class SwitchController(AbstractController):
         service = SERVICE_TURN_ON if not self._inverted else SERVICE_TURN_OFF
         service_data = {ATTR_ENTITY_ID: self._target_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,
@@ -227,7 +228,7 @@ class SwitchController(AbstractController):
         service = SERVICE_TURN_OFF if not self._inverted else SERVICE_TURN_ON
         service_data = {ATTR_ENTITY_ID: self._target_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,
@@ -238,7 +239,8 @@ class SwitchController(AbstractController):
         return True
 
     async def _async_stop(self):
-        await self._async_turn_off(reason=REASON_THERMOSTAT_STOP)
+        if self._is_on:
+            await self._async_turn_off(reason=REASON_THERMOSTAT_STOP)
 
     async def _async_ensure_not_running(self):
         if self._is_on:

@@ -5,6 +5,11 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from custom_components.universal_thermostat.const import (
+    CONF_CLIMATE_TEMP_DELTA,
+    DEFAULT_CLIMATE_TEMP_DELTA,
+)
+
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
@@ -23,8 +28,7 @@ from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import condition
 from homeassistant.helpers.template import RenderInfo, Template
 
-from ..const import CONF_CLIMATE_TEMP_DELTA, DEFAULT_CLIMATE_TEMP_DELTA
-from . import SwitchController
+from .switch_controller import SwitchController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -115,6 +119,7 @@ class ClimateSwitchController(SwitchController):
             return self._hass.states.is_state(self._target_entity_id, HVACMode.HEAT)
         if self._mode == HVACMode.HEAT:
             return self._hass.states.is_state(self._target_entity_id, HVACMode.COOL)
+        return None
 
     @property
     def is_active(self) -> bool:
@@ -138,6 +143,7 @@ class ClimateSwitchController(SwitchController):
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
             return state.attributes.get(ATTR_MIN_TEMP)
+        return None
 
     @property
     def _target_entity_max_temp(self) -> float:
@@ -145,6 +151,7 @@ class ClimateSwitchController(SwitchController):
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
             return state.attributes.get(ATTR_MAX_TEMP)
+        return None
 
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
@@ -182,11 +189,8 @@ class ClimateSwitchController(SwitchController):
             reason=reason,
         )
 
-        if (
-            self._mode == HVACMode.COOL
-            and not self._inverted
-            or self._mode == HVACMode.HEAT
-            and self._inverted
+        if (self._mode == HVACMode.COOL and not self._inverted) or (
+            self._mode == HVACMode.HEAT and self._inverted
         ):
             hvac_mode = HVACMode.COOL
         else:

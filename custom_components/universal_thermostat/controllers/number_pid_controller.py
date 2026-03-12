@@ -5,6 +5,14 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from custom_components.universal_thermostat.const import (
+    CONF_PID_MAX,
+    CONF_PID_MIN,
+    REASON_KEEP_ALIVE,
+    REASON_THERMOSTAT_NOT_RUNNING,
+    REASON_THERMOSTAT_STOP,
+)
+
 from homeassistant.components.climate import HVACMode
 from homeassistant.components.input_number import (
     ATTR_MAX,
@@ -20,18 +28,11 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN, State, split_entity_id
+from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, State, split_entity_id
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import RenderInfo, Template
 
-from ..const import (
-    CONF_PID_MAX,
-    CONF_PID_MIN,
-    REASON_KEEP_ALIVE,
-    REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP,
-)
-from . import AbstractPidController
+from .abstract_pid_controller import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -305,6 +306,7 @@ class NumberPidController(AbstractPidController):
                     state.state,
                     e,
                 )
+        return None
 
     async def _async_turn_on(self, reason=None):
         if self._switch_entity_id is None:
@@ -321,7 +323,7 @@ class NumberPidController(AbstractPidController):
         service = SERVICE_TURN_ON if not self._switch_inverted else SERVICE_TURN_OFF
         service_data = {ATTR_ENTITY_ID: self._switch_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,
@@ -343,7 +345,7 @@ class NumberPidController(AbstractPidController):
         service = SERVICE_TURN_OFF if not self._inverted else SERVICE_TURN_ON
         service_data = {ATTR_ENTITY_ID: self._switch_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,
