@@ -50,6 +50,7 @@ from .const import (
     ATTR_PRESET_NONE_SAVED_STATE,
     CONF_AUTO_COOL_DELTA,
     CONF_AUTO_HEAT_DELTA,
+    CONF_AUTO_MODE_DISABLED,
     CONF_COOLER,
     CONF_HEAT_COOL_DISABLED,
     CONF_HEATER,
@@ -107,6 +108,7 @@ async def async_setup_platform(
     target_temp_high = config.get(CONF_TARGET_TEMP_HIGH)
     target_temp_low = config.get(CONF_TARGET_TEMP_LOW)
     heat_cool_disabled = config.get(CONF_HEAT_COOL_DISABLED)
+    auto_mode_disabled = config.get(CONF_AUTO_MODE_DISABLED)
     initial_hvac_mode = config.get(CONF_INITIAL_HVAC_MODE)
     precision = config.get(CONF_PRECISION)
     target_temp_step = config.get(CONF_TEMP_STEP)
@@ -151,6 +153,7 @@ async def async_setup_platform(
                 auto_cool_delta,
                 auto_heat_delta,
                 heat_cool_disabled,
+                auto_mode_disabled,
                 initial_hvac_mode,
                 precision,
                 target_temp_step,
@@ -181,6 +184,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         auto_cool_delta: Template | None,
         auto_heat_delta: Template | None,
         heat_cool_disabled: bool,
+        auto_mode_disabled: bool,
         initial_hvac_mode: HVACMode | None,
         precision: float | None,
         target_temp_step: float | None,
@@ -234,7 +238,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 self._hvac_list.append(HVACMode.COOL)
 
         if HVACMode.COOL in self._hvac_list and HVACMode.HEAT in self._hvac_list:
-            self._hvac_list.append(HVACMode.AUTO)
+            if not auto_mode_disabled:
+                self._hvac_list.append(HVACMode.AUTO)
             if not heat_cool_disabled:
                 self._hvac_list.append(HVACMode.HEAT_COOL)
 

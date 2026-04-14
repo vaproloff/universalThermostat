@@ -7,6 +7,7 @@ ATTR_TIMEOUT = "timeout"
 
 CONF_AUTO_COOL_DELTA = "auto_cool_delta"
 CONF_AUTO_HEAT_DELTA = "auto_heat_delta"
+CONF_AUTO_MODE_DISABLED = "auto_mode_disabled"
 CONF_CLIMATE_TEMP_DELTA = "target_temp_delta"
 CONF_COLD_TOLERANCE = "cold_tolerance"
 CONF_COOLER = "cooler"

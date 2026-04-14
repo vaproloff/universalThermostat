@@ -31,6 +31,7 @@ from .const import (
     ATTR_TIMEOUT,
     CONF_AUTO_COOL_DELTA,
     CONF_AUTO_HEAT_DELTA,
+    CONF_AUTO_MODE_DISABLED,
     CONF_CLIMATE_TEMP_DELTA,
     CONF_COLD_TOLERANCE,
     CONF_COOLER,
@@ -275,6 +276,7 @@ DATA_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
             CONF_AUTO_HEAT_DELTA, default=DEFAULT_AUTO_HEAT_DELTA
         ): cv.template,
         vol.Optional(CONF_HEAT_COOL_DISABLED, default=False): vol.Coerce(bool),
+        vol.Optional(CONF_AUTO_MODE_DISABLED, default=False): vol.Coerce(bool),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
             [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
         ),
