@@ -1,0 +1,273 @@
+{
+  "title": "Universal Thermostat",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add new Universal Thermostat",
+        "description": "Please set base settings",
+        "data": {
+          "name": "Universal thermostat name",
+          "target_sensor": "Target temperature sensor",
+          "min_temp": "Minimum target temperature",
+          "max_temp": "Maximum target temperature"
+        }
+      },
+      "controllers_menu": {
+        "title": "Adding heaters/coolers",
+        "description": "Add new heater or cooler entity or continue",
+        "data": {
+          "action": "What's next?"
+        },
+        "data_description": {
+          "action": "Added entities:\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}"
+        }
+      },
+      "controller_add": {
+        "title": "Adding heater/cooler",
+        "description": "Choose device entity and its type",
+        "data": {
+          "controller_type": "Device entity type"
+        }
+      },
+      "controller_mode": {
+        "title": "Adding heater/cooler",
+        "description": "Choose control type of entity:\n{current_entity_id}",
+        "data": {
+          "controller_mode": "Control type"
+        }
+      },
+      "controller_config_switch": {
+        "title": "Adding {controller_type}",
+        "description": "Add settings for your toggleable switch entity:\n{current_entity_id}",
+        "data": {
+          "inverted": "Inverted state logic",
+          "ignore_windows": "Ignore windows",
+          "keep_alive": "Keep alive interval",
+          "cold_tolerance": "Cold tolerance",
+          "hot_tolerance": "Hot tolerance",
+          "min_cycle_duration": "Minimum cycle duration"
+        },
+        "data_description": {
+          "ignore_windows": "Ignore opening/closing windows if those available",
+          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
+          "cold_tolerance": "Negative difference from the target temperature at which heater will be turned on (cooler will be turned off)",
+          "hot_tolerance": "Positive difference from the target temperature at which heater will be turned off (cooler will be turned on)",
+          "min_cycle_duration": "Used to protect from on/off cycling"
+        }
+      },
+      "controller_config_pwm_switch": {
+        "title": "Adding {controller_type}",
+        "description": "Add settings for your PWM PID switch entity:\n{current_entity_id}",
+        "data": {
+          "inverted": "Inverted state logic",
+          "ignore_windows": "Ignore windows",
+          "keep_alive": "Keep alive interval",
+          "kp": "PID proportional coefficient",
+          "ki": "PID integral coefficient",
+          "kd": "PID derivative coefficient",
+          "pid_sample_period": "PID constant sample time period",
+          "pwm_period": "PWM period"
+        },
+        "data_description": {
+          "ignore_windows": "Ignore opening/closing windows if those available",
+          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
+          "pwm_period": "Switch will be turned on and turned off according internal PID output once in this period."
+        }
+      },
+      "controller_config_climate": {
+        "title": "Adding {controller_type}",
+        "description": "Add settings for your climate switch entity:\n{current_entity_id}",
+        "data": {
+          "inverted": "Inverted state logic",
+          "ignore_windows": "Ignore windows",
+          "keep_alive": "Keep alive interval",
+          "cold_tolerance": "Cold tolerance",
+          "hot_tolerance": "Hot tolerance",
+          "target_temp_delta": "Targer temperature delta",
+          "min_cycle_duration": "Minimum cycle duration"
+        },
+        "data_description": {
+          "ignore_windows": "Ignore opening/closing windows if those available",
+          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
+          "cold_tolerance": "Negative difference from the target temperature at which heater will be turned on (cooler will be turned off)",
+          "hot_tolerance": "Positive difference from the target temperature at which heater will be turned off (cooler will be turned on)",
+          "target_temp_delta": "Delta between Universal Thermostat and target climate entity set points",
+          "min_cycle_duration": "Used to protect from on/off cycling"
+        }
+      },
+      "controller_config_climate_pid": {
+        "title": "Adding {controller_type}",
+        "description": "Add settings for your PID climate entity:\n{current_entity_id}",
+        "data": {
+          "inverted": "Inverted state logic",
+          "ignore_windows": "Ignore windows",
+          "keep_alive": "Keep alive interval",
+          "kp": "PID proportional coefficient",
+          "ki": "PID integral coefficient",
+          "kd": "PID derivative coefficient",
+          "pid_sample_period": "PID constant sample time period",
+          "min": "Minimum temperature",
+          "max": "Maximum temperature"
+        },
+        "data_description": {
+          "ignore_windows": "Ignore opening/closing windows if those available",
+          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
+          "min": "Attribute `min_temp` from `entity_id` will be used if not specified.",
+          "max": "Attribute `max_temp` from `entity_id` will be used if not specified."
+        }
+      },
+      "controller_config_number_pid": {
+        "title": "Adding {controller_type}",
+        "description": "Add settings for your PID number entity:\n{current_entity_id}",
+        "data": {
+          "inverted": "Inverted state logic",
+          "ignore_windows": "Ignore windows",
+          "keep_alive": "Keep alive interval",
+          "kp": "PID proportional coefficient",
+          "ki": "PID integral coefficient",
+          "kd": "PID derivative coefficient",
+          "pid_sample_period": "PID constant sample time period",
+          "min": "Minimum number value",
+          "max": "Maximum number value",
+          "switch_entity_id": "Switch entity to toggle",
+          "switch_inverted": "Inverted logic for switch entity"
+        },
+        "data_description": {
+          "ignore_windows": "Ignore opening/closing windows if those available",
+          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
+          "min": "Attribute `min_temp` from `entity_id` will be used if not specified.",
+          "max": "Attribute `max_temp` from `entity_id` will be used if not specified."
+        }
+      },
+      "features": {
+        "title": "Additional features",
+        "data": {
+          "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
+          "auto_mode_disabled": "Disable `auto` HVAC mode"
+        }
+      },
+      "windows_menu": {
+        "title": "Adding windows",
+        "description": "Add new window entity or continue.\nWindows are optional and their logic will be available if at least one window entity added to the config.",
+        "data": {
+          "action": "What's next?"
+        },
+        "data_description": {
+          "action": "Added windows:\n{windows}"
+        }
+      },
+      "window_add": {
+        "title": "Adding window",
+        "description": "Choose window entity and its settings",
+        "data": {
+          "inverted": "Inverted",
+          "timeout": "Timeout"
+        },
+        "data_description": {
+          "inverted": "Invert window logic",
+          "timeout": "Time period to wait until stop/start controller after window opening/closing"
+        }
+      },
+      "presets_menu": {
+        "title": "Adding presets",
+        "description": "Add new preset or continue.\nPresets are optional and their logic will be available if at least one preset added to the config.",
+        "data": {
+          "action": "What's next?"
+        },
+        "data_description": {
+          "action": "Added presets:\n{presets}"
+        }
+      },
+      "preset_add": {
+        "title": "Adding preset",
+        "description": "Add name and type for new preset",
+        "data": {
+          "preset_name": "Name",
+          "preset_type": "Type"
+        },
+        "data_description": {
+          "preset_name": "Recommended names: `eco`, `away`, `sleep`, `boost`, `comfort`, `home`, `activity`, that support icons and translations"
+        }
+      },
+      "preset_config_temp_delta": {
+        "title": "Adding preset",
+        "description": "Configuring single temperature delta preset: {current_preset}",
+        "data": {
+          "temp_delta": "Target temperature delta"
+        },
+        "data_description": {
+          "temp_delta": "Changes thermostat target temperature(s)"
+        }
+      },
+      "preset_config_heat_cool_delta": {
+        "title": "Adding preset",
+        "description": "Configuring heating/cooling temperature deltas preset: {current_preset}",
+        "data": {
+          "heat_delta": "Heating target temperature delta",
+          "cool_delta": "Cooling target temperature delta"
+        }
+      },
+      "preset_config_target_temp": {
+        "title": "Adding preset",
+        "description": "Configuring target temperatures preset: {current_preset}",
+        "data": {
+          "target_temp": "Single target temperature",
+          "heat_target_temp": "Heating target temperature",
+          "cool_target_temp": "Cooling target temperature"
+        }
+      },
+      "review": {
+        "title": "Summary review",
+        "description": "Sensor: {sensor}\nHeaters: {heaters}\nCoolers: {coolers}\nWindows: {windows}\nPresets: {presets}\n"
+      }
+    },
+    "error": {
+      "invalid_temp_range": "Invalid temperature range: Minimum has to be lower than Maximum",
+      "no_controllers": "At least one entity must be added",
+      "preset_exists": "Preset with such name already exists",
+      "preset_target_required": "At least one target temp required",
+      "unknown": "Unexpected error"
+    }
+  },
+  "selector": {
+    "controllers_menu_selector": {
+      "options": {
+        "add": "Add heater or cooler",
+        "done": "Done"
+      }
+    },
+    "controller_add_selector": {
+      "options": {
+        "heater": "Heating device entity",
+        "cooler": "Cooling device entity"
+      }
+    },
+    "controller_mode_selector": {
+      "options": {
+        "switch": "Toggleable switch",
+        "pwm_switch": "PWM PID switch",
+        "climate_switch": "Toggleable thermostat with temperature delta",
+        "climate_pid": "PID thermostat"
+      }
+    },
+    "windows_menu_selector": {
+      "options": {
+        "add": "Add window",
+        "done": "Done"
+      }
+    },
+    "presets_menu_selector": {
+      "options": {
+        "add": "Add preset",
+        "done": "Done"
+      }
+    },
+    "preset_add_selector": {
+      "options": {
+        "temp_delta": "Single temperature delta",
+        "heat_cool_deltas": "Heating/cooling temperature deltas",
+        "target_temps": "Target temperatures"
+      }
+    }
+  }
+}
