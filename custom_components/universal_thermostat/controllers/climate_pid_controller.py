@@ -12,6 +12,10 @@ from custom_components.universal_thermostat.const import (
     REASON_THERMOSTAT_NOT_RUNNING,
     REASON_THERMOSTAT_STOP,
 )
+from custom_components.universal_thermostat.template_utils import (
+    get_template_entities,
+    render_float,
+)
 
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
@@ -27,8 +31,7 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, SERVICE_TURN_OFF
 from homeassistant.core import State
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.template import RenderInfo, Template
+from homeassistant.helpers.template import Template
 
 from .abstract_pid_controller import AbstractPidController
 
@@ -85,40 +88,10 @@ class ClimatePidController(AbstractPidController):
     @property
     def _min_output(self) -> float | None:
         """Returns PID Output minimum value."""
-        if self._min_output_template is None:
-            _LOGGER.warning(
-                "%s - %s: min_output template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._default_min_output,
-            )
-            return self._default_min_output
-
-        try:
-            min_output = self._min_output_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render min_output template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._min_output_template,
-                self._default_min_output,
-                e,
-            )
-            return self._default_min_output
-
-        try:
-            min_output = float(min_output)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert min_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                min_output,
-                self._default_min_output,
-                e,
-            )
-            return self._default_min_output
+        min_output = render_float(
+            self._min_output_template,
+            self._default_min_output,
+        )
 
         return max(min_output, self._default_min_output)
 
@@ -149,40 +122,10 @@ class ClimatePidController(AbstractPidController):
     @property
     def _max_output(self) -> float | None:
         """Returns PID Output maximum value."""
-        if self._max_output_template is None:
-            _LOGGER.warning(
-                "%s - %s: max_output template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._default_max_output,
-            )
-            return self._default_max_output
-
-        try:
-            max_output = self._max_output_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render max_output template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._max_output_template,
-                self._default_max_output,
-                e,
-            )
-            return self._default_max_output
-
-        try:
-            max_output = float(max_output)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert max_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                max_output,
-                self._default_max_output,
-                e,
-            )
-            return self._default_max_output
+        max_output = render_float(
+            self._max_output_template,
+            self._default_max_output,
+        )
 
         return min(max_output, self._default_max_output)
 
@@ -233,39 +176,8 @@ class ClimatePidController(AbstractPidController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-
-        if self._min_output_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._min_output_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get output_min template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._min_output_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
-        if self._max_output_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._max_output_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get output_max template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._max_output_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        tracked_entities.extend(get_template_entities(self._min_output_template))
+        tracked_entities.extend(get_template_entities(self._max_output_template))
         return tracked_entities
 
     def _adapt_pid_output(self, value: float) -> float:

@@ -526,6 +526,11 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not self._draft[CONF_HEATER] and not self._draft[CONF_COOLER]:
                 errors["base"] = "no_controllers"
             else:
+                await self.async_set_unique_id(
+                    f"{self._draft[CONF_SENSOR]}_{self._draft[CONF_NAME]}"
+                )
+                self._abort_if_unique_id_configured()
+
                 return self.async_create_entry(
                     title=self._draft[CONF_NAME],
                     data=self._draft,

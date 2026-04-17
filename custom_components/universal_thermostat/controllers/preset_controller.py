@@ -10,9 +10,9 @@ from custom_components.universal_thermostat.const import (
     PRESET_NONE_TARGET_TEMP_HIGH,
     PRESET_NONE_TARGET_TEMP_LOW,
 )
+from custom_components.universal_thermostat.template_utils import render_float
 
 from homeassistant.components.climate import PRESET_NONE, HVACMode
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,159 +52,27 @@ class Preset:
 
     @property
     def _temp_delta(self) -> float | None:
-        if self._temp_delta_template is not None:
-            try:
-                temp_delta = self._temp_delta_template.async_render(parse_result=False)
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to render temp_delta template: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._temp_delta_template,
-                    e,
-                )
-                return None
-
-            try:
-                return float(temp_delta)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "%s: unable to convert temp_delta template value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._temp_delta_template,
-                    e,
-                )
-        return None
+        return render_float(self._temp_delta_template, None)
 
     @property
     def _heat_delta(self) -> float | None:
-        if self._heat_delta_template is not None:
-            try:
-                heat_delta = self._heat_delta_template.async_render(parse_result=False)
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to render heat_delta template: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._heat_delta_template,
-                    e,
-                )
-                return None
-
-            try:
-                return float(heat_delta)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "%s: unable to convert heat_delta template value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._heat_delta_template,
-                    e,
-                )
-        return None
+        return render_float(self._heat_delta_template, None)
 
     @property
     def _cool_delta(self) -> float | None:
-        if self._cool_delta_template is not None:
-            try:
-                cool_delta = self._cool_delta_template.async_render(parse_result=False)
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to render cool_delta template: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._cool_delta_template,
-                    e,
-                )
-                return None
-
-            try:
-                return float(cool_delta)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "%s: unable to convert cool_delta template value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._cool_delta_template,
-                    e,
-                )
-        return None
+        return render_float(self._cool_delta_template, None)
 
     @property
     def _target_temp(self) -> float | None:
-        if self._target_temp_template is not None:
-            try:
-                target_temp = self._target_temp_template.async_render(
-                    parse_result=False
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to render target_temp template: %s.Error: %s",
-                    self._thermostat_entity_id,
-                    self._target_temp_template,
-                    e,
-                )
-                return None
-
-            try:
-                return float(target_temp)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "%s: unable to convert target_temp template value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._target_temp_template,
-                    e,
-                )
-        return None
+        return render_float(self._target_temp_template, None)
 
     @property
     def _heat_target_temp(self) -> float | None:
-        if self._heat_target_temp_template is not None:
-            try:
-                heat_target_temp = self._heat_target_temp_template.async_render(
-                    parse_result=False
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to render heat_target_temp template: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._heat_target_temp_template,
-                    e,
-                )
-                return None
-
-            try:
-                return float(heat_target_temp)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "%s: unable to convert heat_target_temp template value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._heat_target_temp_template,
-                    e,
-                )
-        return None
+        return render_float(self._heat_target_temp_template, None)
 
     @property
     def _cool_target_temp(self) -> float | None:
-        if self._cool_target_temp_template is not None:
-            try:
-                cool_target_temp = self._cool_target_temp_template.async_render(
-                    parse_result=False
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to render cool_target_temp template: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._cool_target_temp_template,
-                    e,
-                )
-                return None
-
-            try:
-                return float(cool_target_temp)
-            except ValueError as e:
-                _LOGGER.warning(
-                    "%s: unable to convert cool_target_temp template value to float: %s. Error: %s",
-                    self._thermostat_entity_id,
-                    self._cool_target_temp_template,
-                    e,
-                )
-        return None
+        return render_float(self._cool_target_temp_template, None)
 
     def get_hvac_mode(self, current_hvac_mode):
         """Return preset HVAC mode according to preset config."""

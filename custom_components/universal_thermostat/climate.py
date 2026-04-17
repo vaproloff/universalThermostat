@@ -17,6 +17,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     CONF_NAME,
@@ -34,12 +35,11 @@ from homeassistant.core import (
     HomeAssistant,
     State,
 )
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.template import RenderInfo, Template
+from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import ConfigType
 
 from . import DOMAIN, PLATFORMS
@@ -86,20 +86,16 @@ from .controller_factory import create_controllers
 from .controllers.abstract_controller import AbstractController
 from .controllers.preset_controller import PresetController
 from .controllers.window_controller import WindowController
+from .template_utils import get_template_entities, render_float
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(
-    hass: HomeAssistant, config: ConfigType, async_add_entities, discovery_info=None
-):
-    """Set up the universal thermostat platform."""
-
-    # prevent unused variable warn
-    _ = discovery_info
-
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
-
+def _create_thermostat_entity(
+    hass: HomeAssistant,
+    config: dict[str, Any],
+) -> UniversalThermostat:
+    """Create thermostat entity from config-like mapping."""
     name = config.get(CONF_NAME)
     sensor_entity_id = config.get(CONF_SENSOR)
     min_temp = config.get(CONF_MIN_TEMP)
@@ -138,33 +134,59 @@ async def async_setup_platform(
     presets = config.get(CONF_PRESETS)
     preset_controller = PresetController(presets) if presets else None
 
-    async_add_entities(
-        [
-            UniversalThermostat(
-                hass,
-                name,
-                controllers,
-                sensor_entity_id,
-                min_temp,
-                max_temp,
-                target_temp,
-                target_temp_high,
-                target_temp_low,
-                auto_cool_delta,
-                auto_heat_delta,
-                heat_cool_disabled,
-                auto_mode_disabled,
-                initial_hvac_mode,
-                precision,
-                target_temp_step,
-                unit,
-                unique_id,
-                object_id,
-                window_controller,
-                preset_controller,
-            )
-        ]
+    return UniversalThermostat(
+        hass,
+        name,
+        controllers,
+        sensor_entity_id,
+        min_temp,
+        max_temp,
+        target_temp,
+        target_temp_high,
+        target_temp_low,
+        auto_cool_delta,
+        auto_heat_delta,
+        heat_cool_disabled,
+        auto_mode_disabled,
+        initial_hvac_mode,
+        precision,
+        target_temp_step,
+        unit,
+        unique_id,
+        object_id,
+        window_controller,
+        preset_controller,
     )
+
+
+async def async_setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    async_add_entities,
+    discovery_info=None,
+) -> None:
+    """Set up the universal thermostat platform from YAML."""
+    _ = discovery_info
+
+    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+
+    entity = _create_thermostat_entity(hass, config)
+    async_add_entities([entity])
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities,
+) -> None:
+    """Set up the universal thermostat platform from a config entry."""
+    config = dict(entry.data)
+
+    if entry.unique_id and CONF_UNIQUE_ID not in config:
+        config[CONF_UNIQUE_ID] = entry.unique_id
+
+    entity = _create_thermostat_entity(hass, config)
+    async_add_entities([entity])
 
 
 class UniversalThermostat(ClimateEntity, RestoreEntity):
@@ -181,8 +203,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         target_temp: float | None,
         target_temp_high: float | None,
         target_temp_low: float | None,
-        auto_cool_delta: Template | None,
-        auto_heat_delta: Template | None,
+        auto_cool_delta: Template | float | None,
+        auto_heat_delta: Template | float | None,
         heat_cool_disabled: bool,
         auto_mode_disabled: bool,
         initial_hvac_mode: HVACMode | None,
@@ -387,79 +409,19 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     @property
     def _auto_cool_delta(self) -> float | None:
-        """Returns Temperature Delta for coolers in Auto mode."""
-        if self._auto_cool_delta_template is None:
-            _LOGGER.warning(
-                "%s: auto_cool_delta template is none. Return default: %s",
-                self.entity_id,
-                DEFAULT_AUTO_HEAT_DELTA,
-            )
-            return float(DEFAULT_AUTO_COOL_DELTA)
-
-        try:
-            auto_cool_delta = self._auto_cool_delta_template.async_render(
-                parse_result=False
-            )
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s: unable to render auto_cool_delta template: %s. Return default: %s. Error: %s",
-                self.entity_id,
-                self._auto_cool_delta_template,
-                DEFAULT_AUTO_COOL_DELTA,
-                e,
-            )
-            return float(DEFAULT_AUTO_COOL_DELTA)
-
-        try:
-            return float(auto_cool_delta)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s: unable to convert auto_cool_delta template value to float: %s. "
-                "Return default: %s. Error: %s",
-                self.entity_id,
-                self._auto_cool_delta_template,
-                DEFAULT_AUTO_COOL_DELTA,
-                e,
-            )
-            return float(DEFAULT_AUTO_COOL_DELTA)
+        """Return temperature delta for coolers in Auto mode."""
+        return render_float(
+            self._auto_cool_delta_template,
+            DEFAULT_AUTO_COOL_DELTA,
+        )
 
     @property
     def _auto_heat_delta(self) -> float | None:
-        """Returns Temperature Delta for heaters in Auto mode."""
-        if self._auto_heat_delta_template is None:
-            _LOGGER.warning(
-                "%s: auto_heat_delta template is none. Return default: %s",
-                self.entity_id,
-                DEFAULT_AUTO_HEAT_DELTA,
-            )
-            return float(DEFAULT_AUTO_HEAT_DELTA)
-
-        try:
-            auto_heat_delta = self._auto_heat_delta_template.async_render(
-                parse_result=False
-            )
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s: unable to render auto_heat_delta template: %s. Return default: %s. Error: %s",
-                self.entity_id,
-                self._auto_heat_delta_template,
-                DEFAULT_AUTO_HEAT_DELTA,
-                e,
-            )
-            return float(DEFAULT_AUTO_HEAT_DELTA)
-
-        try:
-            return float(auto_heat_delta)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s: unable to convert auto_heat_delta template value to float: %s. "
-                "Return default: %s. Error: %s",
-                self.entity_id,
-                self._auto_heat_delta_template,
-                DEFAULT_AUTO_HEAT_DELTA,
-                e,
-            )
-            return float(DEFAULT_AUTO_HEAT_DELTA)
+        """Return temperature delta for heaters in Auto mode."""
+        return render_float(
+            self._auto_heat_delta_template,
+            DEFAULT_AUTO_HEAT_DELTA,
+        )
 
     @property
     def _preset_auto_heat_delta(self) -> float:
@@ -768,37 +730,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     def _get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = []
-
-        if self._auto_cool_delta_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._auto_cool_delta_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to get auto_cool_delta template info: %s. Error: %s",
-                    self.entity_id,
-                    self._auto_cool_delta_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
-        if self._auto_heat_delta_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._auto_heat_delta_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s: unable to get auto_heat_delta template info: %s. Error: %s",
-                    self.entity_id,
-                    self._auto_heat_delta_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        tracked_entities.extend(get_template_entities(self._auto_cool_delta_template))
+        tracked_entities.extend(get_template_entities(self._auto_heat_delta_template))
         return tracked_entities
 
     async def async_turn_on(self) -> None:

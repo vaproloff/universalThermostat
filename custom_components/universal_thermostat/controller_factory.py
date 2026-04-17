@@ -56,9 +56,9 @@ def create_controllers(
         name = f"{prefix}_{controller_number}"
 
         entity_id = conf[CONF_ENTITY_ID]
-        inverted = conf[CONF_INVERTED]
-        keep_alive = conf[CONF_KEEP_ALIVE]
-        ignore_windows = conf[CONF_IGNORE_WINDOWS]
+        inverted = conf.get(CONF_INVERTED, False)
+        keep_alive = conf.get(CONF_KEEP_ALIVE, None)
+        ignore_windows = conf.get(CONF_IGNORE_WINDOWS, False)
 
         domain = split_entity_id(entity_id)[0]
 

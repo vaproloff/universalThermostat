@@ -9,6 +9,10 @@ from custom_components.universal_thermostat.const import (
     CONF_CLIMATE_TEMP_DELTA,
     DEFAULT_CLIMATE_TEMP_DELTA,
 )
+from custom_components.universal_thermostat.template_utils import (
+    get_template_entities,
+    render_float,
+)
 
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
@@ -24,9 +28,8 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, SERVICE_TURN_OFF
 from homeassistant.core import State
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import condition
-from homeassistant.helpers.template import RenderInfo, Template
+from homeassistant.helpers.template import Template
 
 from .switch_controller import SwitchController
 
@@ -76,40 +79,10 @@ class ClimateSwitchController(SwitchController):
     @property
     def _temp_delta(self) -> float | None:
         """Returns Temperature Delta."""
-        if self._temp_delta_template is None:
-            _LOGGER.warning(
-                "%s - %s: temp_delta template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_CLIMATE_TEMP_DELTA,
-            )
-            return float(DEFAULT_CLIMATE_TEMP_DELTA)
-
-        try:
-            temp_delta = self._temp_delta_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render temp_delta template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._temp_delta_template,
-                DEFAULT_CLIMATE_TEMP_DELTA,
-                e,
-            )
-            return float(DEFAULT_CLIMATE_TEMP_DELTA)
-
-        try:
-            return float(temp_delta)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert temp_delta template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._temp_delta_template,
-                DEFAULT_CLIMATE_TEMP_DELTA,
-                e,
-            )
-            return float(DEFAULT_CLIMATE_TEMP_DELTA)
+        return render_float(
+            self._temp_delta_template,
+            DEFAULT_CLIMATE_TEMP_DELTA,
+        )
 
     @property
     def _is_on(self) -> bool:
@@ -156,23 +129,7 @@ class ClimateSwitchController(SwitchController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-
-        if self._temp_delta_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._temp_delta_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get temp_delta template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._temp_delta_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        tracked_entities.extend(get_template_entities(self._temp_delta_template))
         return tracked_entities
 
     async def _async_turn_on(self, reason):

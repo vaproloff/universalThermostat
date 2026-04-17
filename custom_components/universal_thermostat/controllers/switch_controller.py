@@ -15,6 +15,10 @@ from custom_components.universal_thermostat.const import (
     REASON_THERMOSTAT_NOT_RUNNING,
     REASON_THERMOSTAT_STOP,
 )
+from custom_components.universal_thermostat.template_utils import (
+    get_template_entities,
+    render_float,
+)
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.const import (
@@ -25,9 +29,9 @@ from homeassistant.const import (
     STATE_ON,
 )
 from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
-from homeassistant.exceptions import ConditionError, TemplateError
+from homeassistant.exceptions import ConditionError
 from homeassistant.helpers import condition
-from homeassistant.helpers.template import RenderInfo, Template
+from homeassistant.helpers.template import Template
 
 from .abstract_controller import AbstractController
 
@@ -76,82 +80,12 @@ class SwitchController(AbstractController):
     @property
     def _cold_tolerance(self) -> float:
         """Returns Cold tolerance."""
-        if self._cold_tolerance_template is None:
-            _LOGGER.debug(
-                "%s - %s: cold_tolerance template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_COLD_TOLERANCE,
-            )
-            return float(DEFAULT_COLD_TOLERANCE)
-
-        try:
-            cold_tolerance = self._cold_tolerance_template.async_render(
-                parse_result=False
-            )
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render cold_tolerance template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._cold_tolerance_template,
-                DEFAULT_COLD_TOLERANCE,
-                e,
-            )
-            return float(DEFAULT_COLD_TOLERANCE)
-
-        try:
-            return float(cold_tolerance)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert cold_tolerance template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._cold_tolerance_template,
-                DEFAULT_COLD_TOLERANCE,
-                e,
-            )
-            return float(DEFAULT_COLD_TOLERANCE)
+        return render_float(self._cold_tolerance_template, DEFAULT_COLD_TOLERANCE)
 
     @property
     def _hot_tolerance(self) -> float:
         """Returns Hot tolerance."""
-        if self._hot_tolerance_template is None:
-            _LOGGER.warning(
-                "%s - %s: hot_tolerance template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_HOT_TOLERANCE,
-            )
-            return float(DEFAULT_HOT_TOLERANCE)
-
-        try:
-            hot_tolerance = self._hot_tolerance_template.async_render(
-                parse_result=False
-            )
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render hot_tolerance template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._hot_tolerance_template,
-                DEFAULT_HOT_TOLERANCE,
-                e,
-            )
-            return float(DEFAULT_HOT_TOLERANCE)
-
-        try:
-            return float(hot_tolerance)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert hot_tolerance template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._hot_tolerance_template,
-                DEFAULT_HOT_TOLERANCE,
-                e,
-            )
-            return float(DEFAULT_HOT_TOLERANCE)
+        return render_float(self._hot_tolerance_template, DEFAULT_HOT_TOLERANCE)
 
     @property
     def _is_on(self) -> bool:
@@ -162,39 +96,8 @@ class SwitchController(AbstractController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-
-        if self._cold_tolerance_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._cold_tolerance_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get cold_tolerance template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._cold_tolerance_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
-        if self._hot_tolerance_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._hot_tolerance_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get hot_tolerance template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._hot_tolerance_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        tracked_entities.extend(get_template_entities(self._cold_tolerance_template))
+        tracked_entities.extend(get_template_entities(self._hot_tolerance_template))
         return tracked_entities
 
     async def _async_turn_on(self, reason):
