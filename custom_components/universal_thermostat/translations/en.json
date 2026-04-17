@@ -30,61 +30,32 @@
         }
       },
       "controller_mode": {
-        "title": "Adding heater/cooler",
+        "title": "Adding {controller_type}",
         "description": "Choose control type of entity:\n{current_entity_id}",
         "data": {
           "controller_mode": "Control type"
         }
       },
-      "controller_config_switch": {
+      "controller_config": {
         "title": "Adding {controller_type}",
-        "description": "Add settings for your toggleable switch entity:\n{current_entity_id}",
+        "description": "Add settings for your entity:\n{current_entity_id} ({controller_config_type})",
         "data": {
           "inverted": "Inverted state logic",
           "ignore_windows": "Ignore windows",
           "keep_alive": "Keep alive interval",
           "cold_tolerance": "Cold tolerance",
           "hot_tolerance": "Hot tolerance",
-          "min_cycle_duration": "Minimum cycle duration"
-        },
-        "data_description": {
-          "ignore_windows": "Ignore opening/closing windows if those available",
-          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
-          "cold_tolerance": "Negative difference from the target temperature at which heater will be turned on (cooler will be turned off)",
-          "hot_tolerance": "Positive difference from the target temperature at which heater will be turned off (cooler will be turned on)",
-          "min_cycle_duration": "Used to protect from on/off cycling"
-        }
-      },
-      "controller_config_pwm_switch": {
-        "title": "Adding {controller_type}",
-        "description": "Add settings for your PWM PID switch entity:\n{current_entity_id}",
-        "data": {
-          "inverted": "Inverted state logic",
-          "ignore_windows": "Ignore windows",
-          "keep_alive": "Keep alive interval",
+          "target_temp_delta": "Target temperature delta",
+          "min_cycle_duration": "Minimum cycle duration",
           "kp": "PID proportional coefficient",
           "ki": "PID integral coefficient",
           "kd": "PID derivative coefficient",
           "pid_sample_period": "PID constant sample time period",
-          "pwm_period": "PWM period"
-        },
-        "data_description": {
-          "ignore_windows": "Ignore opening/closing windows if those available",
-          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
-          "pwm_period": "Switch will be turned on and turned off according internal PID output once in this period."
-        }
-      },
-      "controller_config_climate": {
-        "title": "Adding {controller_type}",
-        "description": "Add settings for your climate switch entity:\n{current_entity_id}",
-        "data": {
-          "inverted": "Inverted state logic",
-          "ignore_windows": "Ignore windows",
-          "keep_alive": "Keep alive interval",
-          "cold_tolerance": "Cold tolerance",
-          "hot_tolerance": "Hot tolerance",
-          "target_temp_delta": "Targer temperature delta",
-          "min_cycle_duration": "Minimum cycle duration"
+          "pwm_period": "PWM period",
+          "min": "Minimum PID value",
+          "max": "Maximum PID value",
+          "switch_entity_id": "Switch entity to toggle",
+          "switch_inverted": "Inverted logic for switch entity"
         },
         "data_description": {
           "ignore_windows": "Ignore opening/closing windows if those available",
@@ -92,58 +63,21 @@
           "cold_tolerance": "Negative difference from the target temperature at which heater will be turned on (cooler will be turned off)",
           "hot_tolerance": "Positive difference from the target temperature at which heater will be turned off (cooler will be turned on)",
           "target_temp_delta": "Delta between Universal Thermostat and target climate entity set points",
-          "min_cycle_duration": "Used to protect from on/off cycling"
-        }
-      },
-      "controller_config_climate_pid": {
-        "title": "Adding {controller_type}",
-        "description": "Add settings for your PID climate entity:\n{current_entity_id}",
-        "data": {
-          "inverted": "Inverted state logic",
-          "ignore_windows": "Ignore windows",
-          "keep_alive": "Keep alive interval",
-          "kp": "PID proportional coefficient",
-          "ki": "PID integral coefficient",
-          "kd": "PID derivative coefficient",
-          "pid_sample_period": "PID constant sample time period",
-          "min": "Minimum temperature",
-          "max": "Maximum temperature"
-        },
-        "data_description": {
-          "ignore_windows": "Ignore opening/closing windows if those available",
-          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
-          "min": "Attribute `min_temp` from `entity_id` will be used if not specified.",
-          "max": "Attribute `max_temp` from `entity_id` will be used if not specified."
-        }
-      },
-      "controller_config_number_pid": {
-        "title": "Adding {controller_type}",
-        "description": "Add settings for your PID number entity:\n{current_entity_id}",
-        "data": {
-          "inverted": "Inverted state logic",
-          "ignore_windows": "Ignore windows",
-          "keep_alive": "Keep alive interval",
-          "kp": "PID proportional coefficient",
-          "ki": "PID integral coefficient",
-          "kd": "PID derivative coefficient",
-          "pid_sample_period": "PID constant sample time period",
-          "min": "Minimum number value",
-          "max": "Maximum number value",
-          "switch_entity_id": "Switch entity to toggle",
-          "switch_inverted": "Inverted logic for switch entity"
-        },
-        "data_description": {
-          "ignore_windows": "Ignore opening/closing windows if those available",
-          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
-          "min": "Attribute `min_temp` from `entity_id` will be used if not specified.",
-          "max": "Attribute `max_temp` from `entity_id` will be used if not specified."
+          "min_cycle_duration": "Used to protect from on/off cycling",
+          "pwm_period": "Switch will be turned on and turned off according internal PID output once in this period."
         }
       },
       "features": {
         "title": "Additional features",
         "data": {
           "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
-          "auto_mode_disabled": "Disable `auto` HVAC mode"
+          "auto_mode_disabled": "Disable `auto` HVAC mode",
+          "auto_cool_delta": "Auto mode cool delta",
+          "auto_heat_delta": "Auto mode heat delta"
+        },
+        "data_description": {
+          "auto_cool_delta": "Target temperature delta for Coolers in `auto` mode",
+          "auto_heat_delta": "Target temperature delta for Heaters in `auto` mode"
         }
       },
       "windows_menu": {

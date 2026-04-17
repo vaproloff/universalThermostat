@@ -1,4 +1,4 @@
-"""Adds config flow (UI flow) for Universal THermostat component."""
+"""Config flow for the Universal Thermostat integration."""
 
 from typing import Any
 
@@ -7,6 +7,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
+from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
@@ -17,6 +19,8 @@ from . import DOMAIN
 from .config_schema import SUPPORTED_TARGET_DOMAINS, SUPPORTED_WINDOW_DOMAINS
 from .const import (
     ATTR_TIMEOUT,
+    CONF_AUTO_COOL_DELTA,
+    CONF_AUTO_HEAT_DELTA,
     CONF_AUTO_MODE_DISABLED,
     CONF_CLIMATE_TEMP_DELTA,
     CONF_COLD_TOLERANCE,
@@ -48,6 +52,13 @@ from .const import (
     CONF_PWM_SWITCH_PERIOD,
     CONF_SENSOR,
     CONF_WINDOWS,
+    CTRL_CFG_CLIMATE_PID,
+    CTRL_CFG_CLIMATE_SWITCH,
+    CTRL_CFG_NUMBER_PID,
+    CTRL_CFG_PWM_SWITCH,
+    CTRL_CFG_SWITCH,
+    DEFAULT_AUTO_COOL_DELTA,
+    DEFAULT_AUTO_HEAT_DELTA,
     DEFAULT_CLIMATE_TEMP_DELTA,
     DEFAULT_COLD_TOLERANCE,
     DEFAULT_HOT_TOLERANCE,
@@ -55,6 +66,9 @@ from .const import (
     DEFAULT_PID_KD,
     DEFAULT_PID_KI,
     DEFAULT_PID_KP,
+    PRESET_TYPE_HEAT_COOL_DELTAS,
+    PRESET_TYPE_TARGET_TEMPS,
+    PRESET_TYPE_TEMP_DELTA,
 )
 
 
@@ -74,6 +88,8 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_COOLER: [],
             CONF_HEAT_COOL_DISABLED: False,
             CONF_AUTO_MODE_DISABLED: False,
+            CONF_AUTO_COOL_DELTA: DEFAULT_AUTO_COOL_DELTA,
+            CONF_AUTO_HEAT_DELTA: DEFAULT_AUTO_HEAT_DELTA,
             CONF_WINDOWS: [],
             CONF_PRESETS: {},
         }
@@ -82,13 +98,14 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._current_entity_id: str | None = None
         self._current_domain: str | None = None
         self._current_controller: dict[str, Any] = {}
+        self._current_controller_config_type: str | None = None
 
         self._current_window: dict[str, Any] = {}
 
         self._current_preset_name: str | None = None
         self._current_preset_type: str | None = None
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -147,7 +164,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if not self._draft[CONF_HEATER] and not self._draft[CONF_COOLER]:
                 errors["base"] = "no_controllers"
-            elif self._draft["heater"] and self._draft["cooler"]:
+            elif self._draft[CONF_HEATER] and self._draft[CONF_COOLER]:
                 return await self.async_step_features()
             else:
                 return await self.async_step_windows_menu()
@@ -181,14 +198,11 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._current_domain = split_entity_id(entity_id)[0]
             self._current_controller = {CONF_ENTITY_ID: entity_id}
 
-            if self._current_domain in (
-                SWITCH_DOMAIN,
-                INPUT_BOOLEAN_DOMAIN,
-                CLIMATE_DOMAIN,
-            ):
-                return await self.async_step_controller_mode()
+            if self._current_domain in (NUMBER_DOMAIN, INPUT_NUMBER_DOMAIN):
+                self._current_controller_config_type = CTRL_CFG_NUMBER_PID
+                return await self.async_step_controller_config()
 
-            return await self.async_step_controller_config_number_pid()
+            return await self.async_step_controller_mode()
 
         return self.async_show_form(
             step_id="controller_add",
@@ -216,20 +230,24 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             mode = user_input["controller_mode"]
 
             if self._current_domain in (SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN):
-                if mode == "switch":
-                    return await self.async_step_controller_config_switch()
-                return await self.async_step_controller_config_pwm_switch()
+                if mode == CTRL_CFG_SWITCH:
+                    self._current_controller_config_type = CTRL_CFG_SWITCH
+                else:
+                    self._current_controller_config_type = CTRL_CFG_PWM_SWITCH
 
-            if self._current_domain == CLIMATE_DOMAIN:
-                if mode == "switch":
-                    return await self.async_step_controller_config_climate()
-                return await self.async_step_controller_config_climate_pid()
+            elif self._current_domain == CLIMATE_DOMAIN:
+                if mode == CTRL_CFG_CLIMATE_SWITCH:
+                    self._current_controller_config_type = CTRL_CFG_CLIMATE_SWITCH
+                else:
+                    self._current_controller_config_type = CTRL_CFG_CLIMATE_PID
+
+            return await self.async_step_controller_config()
 
         options: list[dict[str, str]] = []
         if self._current_domain in (SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN):
-            options = ["switch", "pwm_switch"]
+            options = [CTRL_CFG_SWITCH, CTRL_CFG_PWM_SWITCH]
         elif self._current_domain == CLIMATE_DOMAIN:
-            options = ["climate_switch", "climate_pid"]
+            options = [CTRL_CFG_CLIMATE_SWITCH, CTRL_CFG_CLIMATE_PID]
 
         return self.async_show_form(
             step_id="controller_mode",
@@ -250,192 +268,21 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_controller_config_switch(
+    async def async_step_controller_config(
         self, user_input: dict[str, Any] | None = None
     ):
-        """Configure a simple switch controller."""
+        """Configure selected controller."""
         if user_input is not None:
             self._append_current_controller(user_input)
             return await self.async_step_controllers_menu()
 
         return self.async_show_form(
-            step_id="controller_config_switch",
-            data_schema=vol.Schema(
-                {
-                    **self._common_controller_schema(),
-                    vol.Required(
-                        CONF_COLD_TOLERANCE, default=DEFAULT_COLD_TOLERANCE
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=20, step=0.1)
-                    ),
-                    vol.Required(
-                        CONF_HOT_TOLERANCE, default=DEFAULT_HOT_TOLERANCE
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=20, step=0.1)
-                    ),
-                    vol.Optional(CONF_MIN_DUR): selector.DurationSelector(),
-                }
-            ),
+            step_id="controller_config",
+            data_schema=vol.Schema(self._get_current_controller_schema()),
             description_placeholders={
                 "current_entity_id": self._current_entity_id,
                 "controller_type": self._current_controller_type,
-            },
-        )
-
-    async def async_step_controller_config_pwm_switch(
-        self, user_input: dict[str, Any] | None = None
-    ):
-        """Configure a PWM switch PID controller."""
-        if user_input is not None:
-            self._append_current_controller(user_input)
-            return await self.async_step_controllers_menu()
-
-        return self.async_show_form(
-            step_id="controller_config_pwm_switch",
-            data_schema=vol.Schema(
-                {
-                    **self._common_controller_schema(),
-                    vol.Required(
-                        CONF_PID_KP, default=DEFAULT_PID_KP
-                    ): selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
-                    vol.Required(
-                        CONF_PID_KI, default=DEFAULT_PID_KI
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.01)
-                    ),
-                    vol.Required(
-                        CONF_PID_KD, default=DEFAULT_PID_KD
-                    ): selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
-                    vol.Optional(CONF_PID_SAMPLE_PERIOD): selector.DurationSelector(),
-                    vol.Required(CONF_PWM_SWITCH_PERIOD): selector.DurationSelector(),
-                }
-            ),
-            description_placeholders={
-                "current_entity_id": self._current_entity_id,
-                "controller_type": self._current_controller_type,
-            },
-        )
-
-    async def async_step_controller_config_climate(
-        self, user_input: dict[str, Any] | None = None
-    ):
-        """Configure a climate switch controller."""
-        if user_input is not None:
-            self._append_current_controller(user_input)
-            return await self.async_step_controllers_menu()
-
-        return self.async_show_form(
-            step_id="controller_config_climate",
-            data_schema=vol.Schema(
-                {
-                    **self._common_controller_schema(),
-                    vol.Required(
-                        CONF_COLD_TOLERANCE, default=DEFAULT_COLD_TOLERANCE
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=20, step=0.1)
-                    ),
-                    vol.Required(
-                        CONF_HOT_TOLERANCE, default=DEFAULT_HOT_TOLERANCE
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=20, step=0.1)
-                    ),
-                    vol.Required(
-                        CONF_CLIMATE_TEMP_DELTA, default=DEFAULT_CLIMATE_TEMP_DELTA
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=-20, max=20, step=0.1)
-                    ),
-                    vol.Optional(CONF_MIN_DUR): selector.DurationSelector(),
-                }
-            ),
-            description_placeholders={
-                "current_entity_id": self._current_entity_id,
-                "controller_type": self._current_controller_type,
-            },
-        )
-
-    async def async_step_controller_config_climate_pid(
-        self, user_input: dict[str, Any] | None = None
-    ):
-        """Configure a climate PID controller."""
-        if user_input is not None:
-            self._append_current_controller(user_input)
-            return await self.async_step_controllers_menu()
-
-        return self.async_show_form(
-            step_id="controller_config_climate_pid",
-            data_schema=vol.Schema(
-                {
-                    **self._common_controller_schema(),
-                    vol.Required(
-                        CONF_PID_KP, default=DEFAULT_PID_KP
-                    ): selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
-                    vol.Required(
-                        CONF_PID_KI, default=DEFAULT_PID_KI
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.01)
-                    ),
-                    vol.Required(
-                        CONF_PID_KD, default=DEFAULT_PID_KD
-                    ): selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
-                    vol.Optional(CONF_PID_SAMPLE_PERIOD): selector.DurationSelector(),
-                    vol.Optional(CONF_PID_MIN): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.1)
-                    ),
-                    vol.Optional(CONF_PID_MAX): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.1)
-                    ),
-                }
-            ),
-            description_placeholders={
-                "current_entity_id": self._current_entity_id,
-                "controller_type": self._current_controller_type,
-            },
-        )
-
-    async def async_step_controller_config_number_pid(
-        self, user_input: dict[str, Any] | None = None
-    ):
-        """Configure a number/input_number PID controller."""
-        if user_input is not None:
-            self._append_current_controller(user_input)
-            return await self.async_step_controllers_menu()
-
-        return self.async_show_form(
-            step_id="controller_config_number_pid",
-            data_schema=vol.Schema(
-                {
-                    **self._common_controller_schema(),
-                    vol.Required(
-                        CONF_PID_KP, default=DEFAULT_PID_KP
-                    ): selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
-                    vol.Required(
-                        CONF_PID_KI, default=DEFAULT_PID_KI
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.01)
-                    ),
-                    vol.Required(
-                        CONF_PID_KD, default=DEFAULT_PID_KD
-                    ): selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
-                    vol.Optional(CONF_PID_SAMPLE_PERIOD): selector.DurationSelector(),
-                    vol.Optional(CONF_PID_MIN): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.1)
-                    ),
-                    vol.Optional(CONF_PID_MAX): selector.NumberSelector(
-                        selector.NumberSelectorConfig(step=0.1)
-                    ),
-                    vol.Optional(CONF_PID_SWITCH_ENTITY_ID): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN]
-                        )
-                    ),
-                    vol.Required(
-                        CONF_PID_SWITCH_INVERTED, default=False
-                    ): selector.BooleanSelector(),
-                }
-            ),
-            description_placeholders={
-                "current_entity_id": self._current_entity_id,
-                "controller_type": self._current_controller_type,
+                "controller_config_type": self._current_controller_config_type,
             },
         )
 
@@ -443,7 +290,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Configure common thermostat features after controllers are added."""
         if user_input is not None:
             self._draft[CONF_HEAT_COOL_DISABLED] = user_input[CONF_HEAT_COOL_DISABLED]
-            self._draft[CONF_HEAT_COOL_DISABLED] = user_input[CONF_HEAT_COOL_DISABLED]
+            self._draft[CONF_AUTO_MODE_DISABLED] = user_input[CONF_AUTO_MODE_DISABLED]
             return await self.async_step_windows_menu()
 
         return self.async_show_form(
@@ -458,6 +305,18 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_AUTO_MODE_DISABLED,
                         default=self._draft[CONF_AUTO_MODE_DISABLED],
                     ): selector.BooleanSelector(),
+                    vol.Optional(
+                        CONF_AUTO_COOL_DELTA,
+                        default=self._draft[CONF_AUTO_COOL_DELTA],
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=-50, max=50, step=0.1)
+                    ),
+                    vol.Optional(
+                        CONF_AUTO_HEAT_DELTA,
+                        default=self._draft[CONF_AUTO_HEAT_DELTA],
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=-50, max=50, step=0.1)
+                    ),
                 }
             ),
         )
@@ -545,9 +404,9 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._current_preset_name = preset_name
                 self._current_preset_type = preset_type
 
-                if preset_type == "temp_delta":
+                if preset_type == PRESET_TYPE_TEMP_DELTA:
                     return await self.async_step_preset_config_temp_delta()
-                if preset_type == "heat_cool_deltas":
+                if preset_type == PRESET_TYPE_HEAT_COOL_DELTAS:
                     return await self.async_step_preset_config_heat_cool_delta()
                 return await self.async_step_preset_config_target_temp()
 
@@ -558,7 +417,11 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required("preset_name"): str,
                     vol.Required("preset_type"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=["temp_delta", "heat_cool_deltas", "target_temps"],
+                            options=[
+                                PRESET_TYPE_TEMP_DELTA,
+                                PRESET_TYPE_HEAT_COOL_DELTAS,
+                                PRESET_TYPE_TARGET_TEMPS,
+                            ],
                             mode=selector.SelectSelectorMode.LIST,
                             translation_key="preset_add_selector",
                         )
@@ -574,7 +437,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Configure temp_delta preset."""
         if user_input is not None:
             self._draft[CONF_PRESETS][self._current_preset_name] = {
-                "temp_delta": user_input["temp_delta"]
+                CONF_PRESET_TEMP_DELTA: user_input[CONF_PRESET_TEMP_DELTA]
             }
             self._reset_current_preset()
             return await self.async_step_presets_menu()
@@ -676,10 +539,31 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "sensor": self._draft[CONF_SENSOR],
                 "heaters": len(self._draft[CONF_HEATER]),
                 "coolers": len(self._draft[CONF_COOLER]),
-                "windows": len(self._draft[CONF_COOLER]),
-                "presets": len(self._draft[CONF_COOLER]),
+                "windows": len(self._draft[CONF_WINDOWS]),
+                "presets": len(self._draft[CONF_PRESETS]),
             },
         )
+
+    def _get_current_controller_schema(self) -> dict:
+        """Return schema for currently selected controller config type."""
+        config_type = self._current_controller_config_type
+
+        if config_type == "switch":
+            return self._build_switch_controller_schema()
+
+        if config_type == "pwm_switch":
+            return self._build_pwm_switch_controller_schema()
+
+        if config_type == "climate":
+            return self._build_climate_controller_schema()
+
+        if config_type == "climate_pid":
+            return self._build_climate_pid_controller_schema()
+
+        if config_type == "number_pid":
+            return self._build_number_pid_controller_schema()
+
+        raise ValueError(f"Unsupported controller config type: {config_type}")
 
     def _common_controller_schema(self) -> dict:
         """Return common controller fields."""
@@ -689,6 +573,96 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_IGNORE_WINDOWS, default=False
             ): selector.BooleanSelector(),
             vol.Optional(CONF_KEEP_ALIVE): selector.DurationSelector(),
+        }
+
+    def _pid_schema(self) -> dict:
+        return {
+            vol.Required(CONF_PID_KP, default=DEFAULT_PID_KP): selector.NumberSelector(
+                selector.NumberSelectorConfig(step=0.1)
+            ),
+            vol.Required(CONF_PID_KI, default=DEFAULT_PID_KI): selector.NumberSelector(
+                selector.NumberSelectorConfig(step=0.01)
+            ),
+            vol.Required(CONF_PID_KD, default=DEFAULT_PID_KD): selector.NumberSelector(
+                selector.NumberSelectorConfig(step=0.1)
+            ),
+            vol.Optional(CONF_PID_SAMPLE_PERIOD): selector.DurationSelector(),
+        }
+
+    def _pid_limits_schema(self) -> dict:
+        return {
+            vol.Optional(CONF_PID_MIN): selector.NumberSelector(
+                selector.NumberSelectorConfig(step=0.1)
+            ),
+            vol.Optional(CONF_PID_MAX): selector.NumberSelector(
+                selector.NumberSelectorConfig(step=0.1)
+            ),
+        }
+
+    def _build_switch_controller_schema(self) -> dict:
+        return {
+            **self._common_controller_schema(),
+            vol.Required(
+                CONF_COLD_TOLERANCE, default=DEFAULT_COLD_TOLERANCE
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=0, max=20, step=0.1)
+            ),
+            vol.Required(
+                CONF_HOT_TOLERANCE, default=DEFAULT_HOT_TOLERANCE
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=0, max=20, step=0.1)
+            ),
+            vol.Optional(CONF_MIN_DUR): selector.DurationSelector(),
+        }
+
+    def _build_pwm_switch_controller_schema(self) -> dict:
+        return {
+            **self._common_controller_schema(),
+            **self._pid_schema(),
+            vol.Required(CONF_PWM_SWITCH_PERIOD): selector.DurationSelector(),
+        }
+
+    def _build_climate_controller_schema(self) -> dict:
+        return {
+            **self._common_controller_schema(),
+            vol.Required(
+                CONF_COLD_TOLERANCE, default=DEFAULT_COLD_TOLERANCE
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=0, max=20, step=0.1)
+            ),
+            vol.Required(
+                CONF_HOT_TOLERANCE, default=DEFAULT_HOT_TOLERANCE
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=0, max=20, step=0.1)
+            ),
+            vol.Optional(
+                CONF_CLIMATE_TEMP_DELTA, default=DEFAULT_CLIMATE_TEMP_DELTA
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=-20, max=20, step=0.1)
+            ),
+            vol.Optional(CONF_MIN_DUR): selector.DurationSelector(),
+        }
+
+    def _build_climate_pid_controller_schema(self) -> dict:
+        return {
+            **self._common_controller_schema(),
+            **self._pid_schema(),
+            **self._pid_limits_schema(),
+        }
+
+    def _build_number_pid_controller_schema(self) -> dict:
+        return {
+            **self._common_controller_schema(),
+            **self._pid_schema(),
+            **self._pid_limits_schema(),
+            vol.Optional(CONF_PID_SWITCH_ENTITY_ID): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=[SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN]
+                )
+            ),
+            vol.Required(
+                CONF_PID_SWITCH_INVERTED, default=False
+            ): selector.BooleanSelector(),
         }
 
     def _append_current_controller(self, data: dict[str, Any]) -> None:
@@ -704,6 +678,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._current_entity_id = None
         self._current_domain = None
         self._current_controller = {}
+        self._current_controller_config_type = None
 
     def _reset_current_preset(self) -> None:
         """Reset temporary preset state."""
