@@ -399,8 +399,8 @@ windows:
 #### Config options
 
 * `entity_id` _(Required)_ - Target entity ID.
-* `inverted` _(Optional, default=false)_ - Need to invert `entity_id` logic.
-* `timeout` _(Optional, default=none)_ - time period to wait until stop/start controller after window opening/closing. Can be a template.
+* `inverted` _(Optional)_ - Need to invert `entity_id` logic. Default: `false`
+* `timeout` _(Optional)_ - time period to wait until stop/start controller after window opening/closing. Can be a template. Default: `none`
 
 #### Common behavior
 * after any window entity turns `on`, controller stops working (`off` if `inverted: true`)
