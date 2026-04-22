@@ -5,14 +5,22 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate import (
+    DOMAIN as CLIMATE_DOMAIN,
+    PRESET_ACTIVITY,
+    PRESET_AWAY,
+    PRESET_BOOST,
+    PRESET_COMFORT,
+    PRESET_ECO,
+    PRESET_SLEEP,
+)
 from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
-from homeassistant.core import split_entity_id
+from homeassistant.core import callback, split_entity_id
 from homeassistant.helpers import selector
 
 from . import DOMAIN
@@ -95,15 +103,16 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
 
         self._current_controller_type: str | None = None
-        self._current_entity_id: str | None = None
-        self._current_domain: str | None = None
         self._current_controller: dict[str, Any] = {}
         self._current_controller_config_type: str | None = None
-
-        self._current_window: dict[str, Any] = {}
-
         self._current_preset_name: str | None = None
         self._current_preset_type: str | None = None
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Create the options flow."""
+        return UniversalThermostatOptionsFlow(config_entry)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Handle the initial step."""
@@ -120,6 +129,12 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._draft[CONF_SENSOR] = user_input[CONF_SENSOR]
                 self._draft[CONF_MIN_TEMP] = user_input[CONF_MIN_TEMP]
                 self._draft[CONF_MAX_TEMP] = user_input[CONF_MAX_TEMP]
+
+                await self.async_set_unique_id(
+                    f"{self._draft[CONF_SENSOR]}_{self._draft[CONF_NAME]}"
+                )
+                self._abort_if_unique_id_configured()
+
                 return await self.async_step_controllers_menu()
 
         return self.async_show_form(
@@ -194,11 +209,10 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             entity_id = user_input[CONF_ENTITY_ID]
             self._current_controller_type = user_input["controller_type"]
-            self._current_entity_id = entity_id
-            self._current_domain = split_entity_id(entity_id)[0]
             self._current_controller = {CONF_ENTITY_ID: entity_id}
 
-            if self._current_domain in (NUMBER_DOMAIN, INPUT_NUMBER_DOMAIN):
+            current_domain = split_entity_id(entity_id)[0]
+            if current_domain in (NUMBER_DOMAIN, INPUT_NUMBER_DOMAIN):
                 self._current_controller_config_type = CTRL_CFG_NUMBER_PID
                 return await self.async_step_controller_config()
 
@@ -208,15 +222,15 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="controller_add",
             data_schema=vol.Schema(
                 {
+                    vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=SUPPORTED_TARGET_DOMAINS)
+                    ),
                     vol.Required("controller_type"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[CONF_HEATER, CONF_COOLER],
                             mode=selector.SelectSelectorMode.LIST,
                             translation_key="controller_add_selector",
                         )
-                    ),
-                    vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=SUPPORTED_TARGET_DOMAINS)
                     ),
                 }
             ),
@@ -226,16 +240,18 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ):
         """Choose controller mode depending on entity domain."""
+        ctrl_domain = split_entity_id(self._current_controller[CONF_ENTITY_ID])[0]
+
         if user_input is not None:
             mode = user_input["controller_mode"]
 
-            if self._current_domain in (SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN):
+            if ctrl_domain in (SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN):
                 if mode == CTRL_CFG_SWITCH:
                     self._current_controller_config_type = CTRL_CFG_SWITCH
                 else:
                     self._current_controller_config_type = CTRL_CFG_PWM_SWITCH
 
-            elif self._current_domain == CLIMATE_DOMAIN:
+            elif ctrl_domain == CLIMATE_DOMAIN:
                 if mode == CTRL_CFG_CLIMATE_SWITCH:
                     self._current_controller_config_type = CTRL_CFG_CLIMATE_SWITCH
                 else:
@@ -244,9 +260,9 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_controller_config()
 
         options: list[dict[str, str]] = []
-        if self._current_domain in (SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN):
+        if ctrl_domain in (SWITCH_DOMAIN, INPUT_BOOLEAN_DOMAIN):
             options = [CTRL_CFG_SWITCH, CTRL_CFG_PWM_SWITCH]
-        elif self._current_domain == CLIMATE_DOMAIN:
+        elif ctrl_domain == CLIMATE_DOMAIN:
             options = [CTRL_CFG_CLIMATE_SWITCH, CTRL_CFG_CLIMATE_PID]
 
         return self.async_show_form(
@@ -263,7 +279,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             description_placeholders={
-                "current_entity_id": self._current_entity_id,
+                "current_entity_id": self._current_controller[CONF_ENTITY_ID],
                 "controller_type": self._current_controller_type,
             },
         )
@@ -280,7 +296,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="controller_config",
             data_schema=vol.Schema(self._get_current_controller_schema()),
             description_placeholders={
-                "current_entity_id": self._current_entity_id,
+                "current_entity_id": self._current_controller[CONF_ENTITY_ID],
                 "controller_type": self._current_controller_type,
                 "controller_config_type": self._current_controller_config_type,
             },
@@ -414,7 +430,20 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="preset_add",
             data_schema=vol.Schema(
                 {
-                    vol.Required("preset_name"): str,
+                    vol.Required("preset_name"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                PRESET_ECO,
+                                PRESET_AWAY,
+                                PRESET_BOOST,
+                                PRESET_COMFORT,
+                                PRESET_SLEEP,
+                                PRESET_ACTIVITY,
+                            ],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="preset_name_selector",
+                        )
+                    ),
                     vol.Required("preset_type"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[
@@ -423,7 +452,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 PRESET_TYPE_TARGET_TEMPS,
                             ],
                             mode=selector.SelectSelectorMode.LIST,
-                            translation_key="preset_add_selector",
+                            translation_key="preset_type_selector",
                         )
                     ),
                 }
@@ -446,7 +475,9 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="preset_config_temp_delta",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_PRESET_TEMP_DELTA): selector.NumberSelector(
+                    vol.Required(
+                        CONF_PRESET_TEMP_DELTA, default="0.0"
+                    ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=-20, max=20, step=0.1)
                     )
                 }
@@ -470,10 +501,14 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="preset_config_heat_cool_delta",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_PRESET_HEAT_DELTA): selector.NumberSelector(
+                    vol.Required(
+                        CONF_PRESET_HEAT_DELTA, default="0.0"
+                    ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=-20, max=20, step=0.1)
                     ),
-                    vol.Required(CONF_PRESET_COOL_DELTA): selector.NumberSelector(
+                    vol.Required(
+                        CONF_PRESET_COOL_DELTA, default="0.0"
+                    ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=-20, max=20, step=0.1)
                     ),
                 }
@@ -523,29 +558,22 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            if not self._draft[CONF_HEATER] and not self._draft[CONF_COOLER]:
-                errors["base"] = "no_controllers"
-            else:
-                await self.async_set_unique_id(
-                    f"{self._draft[CONF_SENSOR]}_{self._draft[CONF_NAME]}"
-                )
-                self._abort_if_unique_id_configured()
-
-                return self.async_create_entry(
-                    title=self._draft[CONF_NAME],
-                    data=self._draft,
-                )
+            return self.async_create_entry(
+                title=self._draft[CONF_NAME],
+                data=self._draft,
+            )
 
         return self.async_show_form(
             step_id="review",
             data_schema=vol.Schema({}),
             errors=errors,
             description_placeholders={
+                "name": self._draft[CONF_NAME],
                 "sensor": self._draft[CONF_SENSOR],
-                "heaters": len(self._draft[CONF_HEATER]),
-                "coolers": len(self._draft[CONF_COOLER]),
-                "windows": len(self._draft[CONF_WINDOWS]),
-                "presets": len(self._draft[CONF_PRESETS]),
+                "heaters": self._format_entities(self._draft[CONF_HEATER]),
+                "coolers": self._format_entities(self._draft[CONF_COOLER]),
+                "windows": self._format_entities(self._draft[CONF_WINDOWS]),
+                "presets": self._format_presets(),
             },
         )
 
@@ -680,8 +708,6 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _reset_current_controller(self) -> None:
         """Reset temporary controller state."""
         self._current_controller_type = None
-        self._current_entity_id = None
-        self._current_domain = None
         self._current_controller = {}
         self._current_controller_config_type = None
 
@@ -701,3 +727,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not self._draft["presets"]:
             return "—"
         return "\n".join(f"- {name}" for name in self._draft["presets"])
+
+
+class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
+    """Handle an option flow for Universal Thermostat."""

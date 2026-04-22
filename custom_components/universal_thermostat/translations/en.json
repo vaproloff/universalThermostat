@@ -24,9 +24,9 @@
       },
       "controller_add": {
         "title": "Adding heater/cooler",
-        "description": "Choose device entity and its type",
         "data": {
-          "controller_type": "Device entity type"
+          "entity_id": "Pick entity",
+          "controller_type": "Choose controller type"
         }
       },
       "controller_mode": {
@@ -94,6 +94,7 @@
         "title": "Adding window",
         "description": "Choose window entity and its settings",
         "data": {
+          "entity_id": "Pick entity",
           "inverted": "Inverted",
           "timeout": "Timeout"
         },
@@ -116,11 +117,8 @@
         "title": "Adding preset",
         "description": "Add name and type for new preset",
         "data": {
-          "preset_name": "Name",
+          "preset_name": "Preset name",
           "preset_type": "Type"
-        },
-        "data_description": {
-          "preset_name": "Recommended names: `eco`, `away`, `sleep`, `boost`, `comfort`, `home`, `activity`, that support icons and translations"
         }
       },
       "preset_config_temp_delta": {
@@ -152,7 +150,7 @@
       },
       "review": {
         "title": "Summary review",
-        "description": "Sensor: {sensor}\nHeaters: {heaters}\nCoolers: {coolers}\nWindows: {windows}\nPresets: {presets}\n"
+        "description": "Sensor: {sensor}\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets: {presets}\n"
       }
     },
     "error": {
@@ -160,6 +158,7 @@
       "no_controllers": "At least one entity must be added",
       "preset_exists": "Preset with such name already exists",
       "preset_target_required": "At least one target temp required",
+      "already_configured": "Device with this name and temperature sensor already configured",
       "unknown": "Unexpected error"
     }
   },
@@ -196,7 +195,18 @@
         "done": "Done"
       }
     },
-    "preset_add_selector": {
+    "preset_name_selector": {
+      "options": {
+        "eco": "Eco",
+        "away": "Away",
+        "boost": "Boost",
+        "comfort": "Comfort",
+        "home": "Home",
+        "sleep": "Sleep",
+        "activity": "Activity"
+      }
+    },
+    "preset_type_selector": {
       "options": {
         "temp_delta": "Single temperature delta",
         "heat_cool_deltas": "Heating/cooling temperature deltas",
