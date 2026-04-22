@@ -4,22 +4,43 @@
     "step": {
       "user": {
         "title": "Add new Universal Thermostat",
-        "description": "Please set base settings",
+        "description": "Please set base settings.",
         "data": {
           "name": "Universal thermostat name",
-          "target_sensor": "Target temperature sensor",
-          "min_temp": "Minimum target temperature",
-          "max_temp": "Maximum target temperature"
+          "target_sensor": "Target temperature sensor"
         }
       },
-      "controllers_menu": {
-        "title": "Adding heaters/coolers",
-        "description": "Add new heater or cooler entity or continue",
+      "options_notice": {
+        "title": "Finish setup in options",
+        "description": "The thermostat \"{name}\" has sensor {sensor} configured.\n\nTo make this thermostat work fully, open the integration options after creation and add at least one controller. You can also configure temperature limits, HVAC modes, windows, and presets there."
+      }
+    },
+    "error": {
+      "invalid_temp_range": "Invalid temperature range: Minimum has to be lower than Maximum",
+      "no_controllers": "At least one entity must be added",
+      "preset_exists": "Preset with such name already exists",
+      "preset_target_required": "At least one target temp required",
+      "already_configured": "Device with this name and temperature sensor already configured",
+      "unknown": "Unexpected error"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Universal Thermostat overview",
+        "description": "Name: {name}\nSensor: {sensor}\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets: {presets}\n",
         "data": {
-          "action": "What's next?"
+          "min_temp": "Minimum target temperature",
+          "max_temp": "Maximum target temperature",
+          "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
+          "auto_mode_disabled": "Disable `auto` HVAC mode",
+          "auto_cool_delta": "Auto mode cool delta",
+          "auto_heat_delta": "Auto mode heat delta",
+          "action": "Action"
         },
         "data_description": {
-          "action": "Added entities:\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}"
+          "auto_cool_delta": "Target temperature delta for Coolers in `auto` mode",
+          "auto_heat_delta": "Target temperature delta for Heaters in `auto` mode"
         }
       },
       "controller_add": {
@@ -67,27 +88,11 @@
           "pwm_period": "Switch will be turned on and turned off according internal PID output once in this period."
         }
       },
-      "features": {
-        "title": "Additional features",
+      "controller_remove": {
+        "title": "Remove heater/cooler",
+        "description": "Choose controller you want to remove from Thermostat",
         "data": {
-          "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
-          "auto_mode_disabled": "Disable `auto` HVAC mode",
-          "auto_cool_delta": "Auto mode cool delta",
-          "auto_heat_delta": "Auto mode heat delta"
-        },
-        "data_description": {
-          "auto_cool_delta": "Target temperature delta for Coolers in `auto` mode",
-          "auto_heat_delta": "Target temperature delta for Heaters in `auto` mode"
-        }
-      },
-      "windows_menu": {
-        "title": "Adding windows",
-        "description": "Add new window entity or continue.\nWindows are optional and their logic will be available if at least one window entity added to the config.",
-        "data": {
-          "action": "What's next?"
-        },
-        "data_description": {
-          "action": "Added windows:\n{windows}"
+          "controller": "Controller"
         }
       },
       "window_add": {
@@ -103,14 +108,11 @@
           "timeout": "Time period to wait until stop/start controller after window opening/closing"
         }
       },
-      "presets_menu": {
-        "title": "Adding presets",
-        "description": "Add new preset or continue.\nPresets are optional and their logic will be available if at least one preset added to the config.",
+      "window_remove": {
+        "title": "Remove window",
+        "description": "Choose window you want to remove from Thermostat",
         "data": {
-          "action": "What's next?"
-        },
-        "data_description": {
-          "action": "Added presets:\n{presets}"
+          "window": "Window"
         }
       },
       "preset_add": {
@@ -148,9 +150,12 @@
           "cool_target_temp": "Cooling target temperature"
         }
       },
-      "review": {
-        "title": "Summary review",
-        "description": "Sensor: {sensor}\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets: {presets}\n"
+      "preset_remove": {
+        "title": "Remove preset",
+        "description": "Choose preset you want to remove from Thermostat",
+        "data": {
+          "preset": "Preset"
+        }
       }
     },
     "error": {
@@ -158,11 +163,21 @@
       "no_controllers": "At least one entity must be added",
       "preset_exists": "Preset with such name already exists",
       "preset_target_required": "At least one target temp required",
-      "already_configured": "Device with this name and temperature sensor already configured",
       "unknown": "Unexpected error"
     }
   },
   "selector": {
+    "options_action_selector": {
+      "options": {
+        "add_controller": "Add controller",
+        "remove_controller": "Remove controller",
+        "add_preset": "Add preset",
+        "remove_preset": "Remove preset",
+        "add_window": "Add window",
+        "remove_window": "Remove window",
+        "save": "Done"
+      }
+    },
     "controllers_menu_selector": {
       "options": {
         "add": "Add heater or cooler",

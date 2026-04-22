@@ -180,7 +180,7 @@ async def async_setup_entry(
     async_add_entities,
 ) -> None:
     """Set up the universal thermostat platform from a config entry."""
-    config = dict(entry.data)
+    config = {**entry.data, **entry.options}
 
     if entry.unique_id and CONF_UNIQUE_ID not in config:
         config[CONF_UNIQUE_ID] = entry.unique_id
