@@ -12,7 +12,7 @@
       },
       "options_notice": {
         "title": "Finish setup in options",
-        "description": "The thermostat \"{name}\" has sensor {sensor} configured.\n\nTo make this thermostat work fully, open the integration options after creation and add at least one controller. You can also configure temperature limits, HVAC modes, windows, and presets there."
+        "description": "The thermostat \"{name}\" with {sensor} configured.\nPlease open the integration options after creation and add at least one controller. You can also configure other settings, HVAC modes, windows, and presets there."
       }
     },
     "error": {
@@ -28,19 +28,31 @@
     "step": {
       "init": {
         "title": "Universal Thermostat overview",
-        "description": "Name: {name}\nSensor: {sensor}\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets: {presets}\n",
+        "description": "Name: {name}\nSensor: {sensor}\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets:\n{presets}",
+        "data": {
+          "action": "What to do?"
+        }
+      },
+      "thermostat_settings": {
+        "title": "Thermostat settings",
         "data": {
           "min_temp": "Minimum target temperature",
           "max_temp": "Maximum target temperature",
           "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
           "auto_mode_disabled": "Disable `auto` HVAC mode",
           "auto_cool_delta": "Auto mode cool delta",
-          "auto_heat_delta": "Auto mode heat delta",
-          "action": "Action"
+          "auto_heat_delta": "Auto mode heat delta"
         },
         "data_description": {
           "auto_cool_delta": "Target temperature delta for Coolers in `auto` mode",
           "auto_heat_delta": "Target temperature delta for Heaters in `auto` mode"
+        }
+      },
+      "controllers_menu": {
+        "title": "Controllers",
+        "description": "Heaters:\n{heaters}\n\nCoolers:\n{coolers}",
+        "data": {
+          "action": "Action"
         }
       },
       "controller_add": {
@@ -95,6 +107,13 @@
           "controller": "Controller"
         }
       },
+      "windows_menu": {
+        "title": "Windows",
+        "description": "Windows:\n{windows}",
+        "data": {
+          "action": "Action"
+        }
+      },
       "window_add": {
         "title": "Adding window",
         "description": "Choose window entity and its settings",
@@ -113,6 +132,13 @@
         "description": "Choose window you want to remove from Thermostat",
         "data": {
           "window": "Window"
+        }
+      },
+      "presets_menu": {
+        "title": "Presets",
+        "description": "Presets:\n{presets}",
+        "data": {
+          "action": "Action"
         }
       },
       "preset_add": {
@@ -169,18 +195,17 @@
   "selector": {
     "options_action_selector": {
       "options": {
-        "add_controller": "Add controller",
-        "remove_controller": "Remove controller",
-        "add_preset": "Add preset",
-        "remove_preset": "Remove preset",
-        "add_window": "Add window",
-        "remove_window": "Remove window",
+        "thermostat_settings": "Thermostat settings",
+        "controllers_menu": "Set up coolers/heaters",
+        "windows_menu": "Set up Windows",
+        "presets_menu": "Set up Presets",
         "save": "Done"
       }
     },
     "controllers_menu_selector": {
       "options": {
         "add": "Add heater or cooler",
+        "remove": "Remove heater or cooler",
         "done": "Done"
       }
     },
@@ -201,12 +226,14 @@
     "windows_menu_selector": {
       "options": {
         "add": "Add window",
+        "remove": "Remove window",
         "done": "Done"
       }
     },
     "presets_menu_selector": {
       "options": {
         "add": "Add preset",
+        "remove": "Remove preset",
         "done": "Done"
       }
     },

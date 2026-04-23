@@ -1,5 +1,5 @@
 {
   "name": "Universal Thermostat",
   "render_readme": true,
-  "homeassistant": "2024.2.0"
+  "homeassistant": "2025.1.0"
 }

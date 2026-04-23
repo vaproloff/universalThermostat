@@ -130,9 +130,7 @@ class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_options_notice(
-        self, user_input: dict[str, Any] | None = None
-    ):
+    async def async_step_options_notice(self, user_input: dict[str, Any] | None = None):
         """Inform the user that options must be configured next."""
         if user_input is not None:
             return self.async_create_entry(
@@ -159,25 +157,36 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         self._draft: dict[str, Any] = {
             CONF_NAME: config_entry.data[CONF_NAME],
             CONF_SENSOR: config_entry.data[CONF_SENSOR],
-            CONF_MIN_TEMP: DEFAULT_MIN_TEMP,
-            CONF_MAX_TEMP: DEFAULT_MAX_TEMP,
-            CONF_HEATER: [],
-            CONF_COOLER: [],
-            CONF_HEAT_COOL_DISABLED: False,
-            CONF_AUTO_MODE_DISABLED: False,
-            CONF_AUTO_COOL_DELTA: DEFAULT_AUTO_COOL_DELTA,
-            CONF_AUTO_HEAT_DELTA: DEFAULT_AUTO_HEAT_DELTA,
-            CONF_WINDOWS: [],
-            CONF_PRESETS: {},
+            CONF_MIN_TEMP: config_entry.options.get(CONF_MIN_TEMP, DEFAULT_MIN_TEMP),
+            CONF_MAX_TEMP: config_entry.options.get(CONF_MAX_TEMP, DEFAULT_MAX_TEMP),
+            CONF_HEATER: [
+                dict(controller)
+                for controller in config_entry.options.get(CONF_HEATER, [])
+            ],
+            CONF_COOLER: [
+                dict(controller)
+                for controller in config_entry.options.get(CONF_COOLER, [])
+            ],
+            CONF_HEAT_COOL_DISABLED: config_entry.options.get(
+                CONF_HEAT_COOL_DISABLED, False
+            ),
+            CONF_AUTO_MODE_DISABLED: config_entry.options.get(
+                CONF_AUTO_MODE_DISABLED, False
+            ),
+            CONF_AUTO_COOL_DELTA: config_entry.options.get(
+                CONF_AUTO_COOL_DELTA, DEFAULT_AUTO_COOL_DELTA
+            ),
+            CONF_AUTO_HEAT_DELTA: config_entry.options.get(
+                CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
+            ),
+            CONF_WINDOWS: [
+                dict(window) for window in config_entry.options.get(CONF_WINDOWS, [])
+            ],
+            CONF_PRESETS: {
+                preset: dict(config)
+                for preset, config in config_entry.options.get(CONF_PRESETS, {}).items()
+            },
         }
-        self._draft.update(
-            {
-                key: value
-                for key, value in config_entry.data.items()
-                if key in self._draft
-            }
-        )
-        self._draft.update(config_entry.options)
 
         self._current_controller_type: str | None = None
         self._current_controller: dict[str, Any] = {}
@@ -187,6 +196,67 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         """Manage Universal Thermostat options."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            action = user_input["action"]
+
+            if action == "thermostat_settings":
+                return await self.async_step_thermostat_settings()
+            if action == "controllers_menu":
+                return await self.async_step_controllers_menu()
+            if action == "windows_menu":
+                return await self.async_step_windows_menu()
+            if action == "presets_menu":
+                return await self.async_step_presets_menu()
+
+            if action == "save":
+                if not self._draft[CONF_HEATER] and not self._draft[CONF_COOLER]:
+                    errors["base"] = "no_controllers"
+                else:
+                    return self.async_create_entry(
+                        title="",
+                        data={
+                            key: value
+                            for key, value in self._draft.items()
+                            if key not in (CONF_NAME, CONF_SENSOR)
+                        },
+                    )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                "thermostat_settings",
+                                "controllers_menu",
+                                "windows_menu",
+                                "presets_menu",
+                                "save",
+                            ],
+                            mode=selector.SelectSelectorMode.LIST,
+                            translation_key="options_action_selector",
+                        )
+                    ),
+                }
+            ),
+            errors=errors,
+            description_placeholders={
+                "name": self._draft[CONF_NAME],
+                "sensor": self._draft[CONF_SENSOR],
+                "heaters": self._format_entities(self._draft[CONF_HEATER]),
+                "coolers": self._format_entities(self._draft[CONF_COOLER]),
+                "windows": self._format_entities(self._draft[CONF_WINDOWS]),
+                "presets": self._format_presets(),
+            },
+        )
+
+    async def async_step_thermostat_settings(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manage general thermostat settings."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -211,49 +281,10 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                     CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
                 )
 
-                action = user_input["action"]
-                if action == "add_controller":
-                    return await self.async_step_controller_add()
-                if action == "remove_controller":
-                    return await self.async_step_controller_remove()
-                if action == "add_preset":
-                    return await self.async_step_preset_add()
-                if action == "remove_preset":
-                    return await self.async_step_preset_remove()
-                if action == "add_window":
-                    return await self.async_step_window_add()
-                if action == "remove_window":
-                    return await self.async_step_window_remove()
-
-                if action == "save":
-                    if not self._draft[CONF_HEATER] and not self._draft[CONF_COOLER]:
-                        errors["base"] = "no_controllers"
-                    else:
-                        return self.async_create_entry(
-                            title="",
-                            data={
-                                key: value
-                                for key, value in self._draft.items()
-                                if key not in (CONF_NAME, CONF_SENSOR)
-                            },
-                        )
-
-        options = ["add_controller"]
-        if self._draft[CONF_HEATER] or self._draft[CONF_COOLER]:
-            options.append("remove_controller")
-
-        options.append("add_window")
-        if self._draft[CONF_WINDOWS]:
-            options.append("remove_window")
-
-        options.append("add_preset")
-        if self._draft[CONF_PRESETS]:
-            options.append("remove_preset")
-
-        options.append("save")
+                return await self.async_step_init()
 
         return self.async_show_form(
-            step_id="init",
+            step_id="thermostat_settings",
             data_schema=vol.Schema(
                 {
                     vol.Required(
@@ -286,23 +317,46 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=-50, max=50, step=0.1)
                     ),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_controllers_menu(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manage controller actions."""
+        if user_input is not None:
+            action = user_input["action"]
+
+            if action == "add":
+                return await self.async_step_controller_add()
+            if action == "remove":
+                return await self.async_step_controller_remove()
+            return await self.async_step_init()
+
+        options = ["add"]
+        if self._draft[CONF_HEATER] or self._draft[CONF_COOLER]:
+            options.append("remove")
+
+        options.append("done")
+
+        return self.async_show_form(
+            step_id="controllers_menu",
+            data_schema=vol.Schema(
+                {
                     vol.Required("action"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=options,
                             mode=selector.SelectSelectorMode.LIST,
-                            translation_key="options_action_selector",
+                            translation_key="controllers_menu_selector",
                         )
                     ),
                 }
             ),
-            errors=errors,
             description_placeholders={
-                "name": self._draft[CONF_NAME],
-                "sensor": self._draft[CONF_SENSOR],
                 "heaters": self._format_entities(self._draft[CONF_HEATER]),
                 "coolers": self._format_entities(self._draft[CONF_COOLER]),
-                "windows": self._format_entities(self._draft[CONF_WINDOWS]),
-                "presets": self._format_presets(),
             },
         )
 
@@ -392,7 +446,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         """Configure selected controller."""
         if user_input is not None:
             self._append_current_controller(user_input)
-            return await self.async_step_init()
+            return await self.async_step_controllers_menu()
 
         return self.async_show_form(
             step_id="controller_config",
@@ -413,7 +467,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 controller_type, index = user_input["controller"].split(":")
                 self._draft[controller_type].pop(int(index))
 
-            return await self.async_step_init()
+            return await self.async_step_controllers_menu()
 
         options = []
         for controller_type in (CONF_HEATER, CONF_COOLER):
@@ -439,11 +493,46 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             ),
         )
 
+    async def async_step_windows_menu(self, user_input: dict[str, Any] | None = None):
+        """Manage window actions."""
+        if user_input is not None:
+            action = user_input["action"]
+
+            if action == "add":
+                return await self.async_step_window_add()
+            if action == "remove":
+                return await self.async_step_window_remove()
+            return await self.async_step_init()
+
+        options = ["add"]
+        if self._draft[CONF_WINDOWS]:
+            options.append("remove")
+
+        options.append("done")
+
+        return self.async_show_form(
+            step_id="windows_menu",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options,
+                            mode=selector.SelectSelectorMode.LIST,
+                            translation_key="windows_menu_selector",
+                        )
+                    ),
+                }
+            ),
+            description_placeholders={
+                "windows": self._format_entities(self._draft[CONF_WINDOWS]),
+            },
+        )
+
     async def async_step_window_add(self, user_input: dict[str, Any] | None = None):
         """Add a window entity."""
         if user_input is not None:
             self._draft[CONF_WINDOWS].append(user_input)
-            return await self.async_step_init()
+            return await self.async_step_windows_menu()
 
         return self.async_show_form(
             step_id="window_add",
@@ -465,7 +554,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             if user_input["window"] != "none":
                 self._draft[CONF_WINDOWS].pop(int(user_input["window"]))
-            return await self.async_step_init()
+            return await self.async_step_windows_menu()
 
         options = [
             {
@@ -487,6 +576,41 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                     )
                 }
             ),
+        )
+
+    async def async_step_presets_menu(self, user_input: dict[str, Any] | None = None):
+        """Manage preset actions."""
+        if user_input is not None:
+            action = user_input["action"]
+
+            if action == "add":
+                return await self.async_step_preset_add()
+            if action == "remove":
+                return await self.async_step_preset_remove()
+            return await self.async_step_init()
+
+        options = ["add"]
+        if self._draft[CONF_PRESETS]:
+            options.append("remove")
+
+        options.append("done")
+
+        return self.async_show_form(
+            step_id="presets_menu",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options,
+                            mode=selector.SelectSelectorMode.LIST,
+                            translation_key="presets_menu_selector",
+                        )
+                    ),
+                }
+            ),
+            description_placeholders={
+                "presets": self._format_presets(),
+            },
         )
 
     async def async_step_preset_add(self, user_input: dict[str, Any] | None = None):
@@ -552,7 +676,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 CONF_PRESET_TEMP_DELTA: user_input[CONF_PRESET_TEMP_DELTA]
             }
             self._reset_current_preset()
-            return await self.async_step_init()
+            return await self.async_step_presets_menu()
 
         return self.async_show_form(
             step_id="preset_config_temp_delta",
@@ -578,7 +702,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 CONF_PRESET_COOL_DELTA: user_input[CONF_PRESET_COOL_DELTA],
             }
             self._reset_current_preset()
-            return await self.async_step_init()
+            return await self.async_step_presets_menu()
 
         return self.async_show_form(
             step_id="preset_config_heat_cool_delta",
@@ -615,7 +739,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             else:
                 self._draft[CONF_PRESETS][self._current_preset_name] = data
                 self._reset_current_preset()
-                return await self.async_step_init()
+                return await self.async_step_presets_menu()
 
         return self.async_show_form(
             step_id="preset_config_target_temp",
@@ -642,7 +766,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             if user_input["preset"] != "none":
                 self._draft[CONF_PRESETS].pop(user_input["preset"], None)
-            return await self.async_step_init()
+            return await self.async_step_presets_menu()
 
         return self.async_show_form(
             step_id="preset_remove",
