@@ -73,7 +73,7 @@ def create_controllers(
                     conf[CONF_PID_KP],
                     conf[CONF_PID_KI],
                     conf[CONF_PID_KD],
-                    conf[CONF_PID_SAMPLE_PERIOD],
+                    conf.get(CONF_PID_SAMPLE_PERIOD, None),
                     inverted,
                     keep_alive,
                     ignore_windows,
@@ -109,8 +109,8 @@ def create_controllers(
                     inverted,
                     keep_alive,
                     ignore_windows,
-                    conf[CONF_PID_MIN],
-                    conf[CONF_PID_MAX],
+                    conf.get(CONF_PID_MIN, None),
+                    conf.get(CONF_PID_MAX, None),
                 )
             else:
                 min_duration = conf.get(CONF_MIN_DUR, None)
@@ -139,13 +139,13 @@ def create_controllers(
                 conf[CONF_PID_KP],
                 conf[CONF_PID_KI],
                 conf[CONF_PID_KD],
-                conf[CONF_PID_SAMPLE_PERIOD],
+                conf.get(CONF_PID_SAMPLE_PERIOD, None),
                 inverted,
                 keep_alive,
                 ignore_windows,
-                conf[CONF_PID_MIN],
-                conf[CONF_PID_MAX],
-                conf[CONF_PID_SWITCH_ENTITY_ID],
+                conf.get(CONF_PID_MIN, None),
+                conf.get(CONF_PID_MAX, None),
+                conf.get(CONF_PID_SWITCH_ENTITY_ID, None),
                 conf[CONF_PID_SWITCH_INVERTED],
             )
 

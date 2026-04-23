@@ -77,8 +77,6 @@ from .const import (
     DEFAULT_PID_KD,
     DEFAULT_PID_KI,
     DEFAULT_PID_KP,
-    DEFAULT_PID_MAX,
-    DEFAULT_PID_MIN,
 )
 
 SUPPORTED_TARGET_DOMAINS = [
@@ -139,8 +137,8 @@ CTRL_SCHEMA_PWM_SWITCH = CTRL_SCHEMA_PID_COMMON.extend(
 
 CTRL_SCHEMA_PID_CLIMATE = CTRL_SCHEMA_PID_COMMON.extend(
     {
-        vol.Optional(CONF_PID_MIN, default=DEFAULT_PID_MIN): cv.template,
-        vol.Optional(CONF_PID_MAX, default=DEFAULT_PID_MAX): cv.template,
+        vol.Optional(CONF_PID_MIN): cv.template,
+        vol.Optional(CONF_PID_MAX): cv.template,
     }
 )
 

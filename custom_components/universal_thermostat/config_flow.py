@@ -787,19 +787,19 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         """Return schema for currently selected controller config type."""
         config_type = self._current_controller_config_type
 
-        if config_type == "switch":
+        if config_type == CTRL_CFG_SWITCH:
             return self._build_switch_controller_schema()
 
-        if config_type == "pwm_switch":
+        if config_type == CTRL_CFG_PWM_SWITCH:
             return self._build_pwm_switch_controller_schema()
 
-        if config_type == "climate":
+        if config_type == CTRL_CFG_CLIMATE_SWITCH:
             return self._build_climate_controller_schema()
 
-        if config_type == "climate_pid":
+        if config_type == CTRL_CFG_CLIMATE_PID:
             return self._build_climate_pid_controller_schema()
 
-        if config_type == "number_pid":
+        if config_type == CTRL_CFG_NUMBER_PID:
             return self._build_number_pid_controller_schema()
 
         raise ValueError(f"Unsupported controller config type: {config_type}")
