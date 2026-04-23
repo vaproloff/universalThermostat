@@ -10,10 +10,7 @@ from custom_components.universal_thermostat.const import (
     PRESET_NONE_TARGET_TEMP_HIGH,
     PRESET_NONE_TARGET_TEMP_LOW,
 )
-from custom_components.universal_thermostat.template_utils import (
-    get_template_entities,
-    render_float,
-)
+from custom_components.universal_thermostat.template_utils import render_float
 
 from homeassistant.components.climate import PRESET_NONE, HVACMode
 from homeassistant.helpers.template import Template

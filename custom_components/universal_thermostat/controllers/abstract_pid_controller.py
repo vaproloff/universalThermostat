@@ -14,10 +14,16 @@ from custom_components.universal_thermostat.const import (
     DEFAULT_PID_KD,
     DEFAULT_PID_KI,
     DEFAULT_PID_KP,
+    REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED,
     REASON_KEEP_ALIVE,
     REASON_PID_CONTROL,
+    REASON_PRESET_CHANGED,
+    REASON_TEMPLATE_ENTITY_CHANGED,
+    REASON_THERMOSTAT_FIRST_RUN,
+    REASON_THERMOSTAT_HVAC_MODE_CHANGED,
     REASON_THERMOSTAT_SENSOR_CHANGED,
     REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
+    REASON_WINDOW_ENTITY_CHANGED,
 )
 from custom_components.universal_thermostat.template_utils import (
     get_template_entities,
@@ -33,6 +39,18 @@ from .abstract_controller import AbstractController
 from .pid_controller import PIDController
 
 _LOGGER = logging.getLogger(__name__)
+
+PID_UPDATE_REASONS = {
+    REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED,
+    REASON_PID_CONTROL,
+    REASON_PRESET_CHANGED,
+    REASON_TEMPLATE_ENTITY_CHANGED,
+    REASON_THERMOSTAT_FIRST_RUN,
+    REASON_THERMOSTAT_HVAC_MODE_CHANGED,
+    REASON_THERMOSTAT_SENSOR_CHANGED,
+    REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
+    REASON_WINDOW_ENTITY_CHANGED,
+}
 
 
 class AbstractPidController(AbstractController, abc.ABC):
@@ -291,13 +309,15 @@ class AbstractPidController(AbstractController, abc.ABC):
 
             self._last_output_limits = output_limits
 
-        if reason == REASON_KEEP_ALIVE and self._last_output:
-            await self._apply_output(self._last_output)
-        elif reason in (
-            REASON_THERMOSTAT_SENSOR_CHANGED,
-            REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
-            REASON_PID_CONTROL,
+        should_update_pid = force or reason in PID_UPDATE_REASONS
+
+        if (
+            reason == REASON_KEEP_ALIVE
+            and self._last_output is not None
+            and not should_update_pid
         ):
+            await self._apply_output(self._last_output)
+        elif should_update_pid:
             output = self._pid.update(cur_temp)
             if output is None:
                 _LOGGER.debug(

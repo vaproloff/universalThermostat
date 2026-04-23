@@ -98,13 +98,22 @@ class WindowController:
         """Return a list of window entities."""
         return [window.entity_id for window in self._windows]
 
+    def _is_window_opened(self, window: Window) -> bool:
+        """Return if a window is currently open, ignoring delays."""
+        return self._hass.states.is_state(
+            window.entity_id, STATE_ON if not window.inverted else STATE_OFF
+        )
+
+    @property
+    def is_opened(self) -> bool:
+        """If any window is currently opened."""
+        return any(self._is_window_opened(window) for window in self._windows)
+
     @property
     def is_safe_opened(self) -> bool:
         """If any of windows is opened."""
         for window in self._windows:
-            is_now_opened = self._hass.states.is_state(
-                window.entity_id, STATE_ON if not window.inverted else STATE_OFF
-            )
+            is_now_opened = self._is_window_opened(window)
 
             if window.timeout is not None:
                 if (
