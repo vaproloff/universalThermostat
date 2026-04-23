@@ -2,9 +2,12 @@
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 
 DOMAIN = "universal_thermostat"
 PLATFORMS = ["climate"]
+
+CONFIG_SCHEMA = cv.platform_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:

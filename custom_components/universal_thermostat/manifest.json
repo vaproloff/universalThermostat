@@ -4,6 +4,7 @@
   "codeowners": [
     "@vaproloff"
   ],
+  "config_flow": true,
   "dependencies": [
     "climate",
     "sensor",
@@ -14,7 +15,6 @@
   ],
   "documentation": "https://github.com/vaproloff/universalThermostat/",
   "iot_class": "local_polling",
-  "config_flow": true,
   "issue_tracker": "https://github.com/vaproloff/universalThermostat/issues",
   "requirements": [],
   "version": "2026.4.0"
