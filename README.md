@@ -45,17 +45,18 @@ This integration solves real-world tasks:
    `<config_dir>/custom_components/universal_thermostat` directory.
 2. Restart Home Assistant
 
----
-
 ## ⚡ Quick start (UI)
 
 1. Go to **Settings → Devices & Services**
 2. Click **Add Integration**
-3. Search for **Universal Thermostat**
-4. Follow setup steps:
+3. Search for **Universal Thermostat** and choose it
+4. Complete basic setup:
+   - set friendly name
    - choose temperature sensor
-   - add heaters and/or coolers
-   - configure behavior
+5. Then go to integration entry options (⚙️), where you can
+   - configure heaters and/or coolers
+   - configure windows and presets
+   - configure settings
 
 👉 No YAML required for basic usage
 
