@@ -14,7 +14,7 @@ def render_float(value: Template | float | None, default: float) -> float:
 
     try:
         return float(value.async_render(parse_result=False))
-    except TemplateError, TypeError, ValueError, AttributeError:
+    except (TemplateError, TypeError, ValueError, AttributeError):
         return float(default)
 
 
@@ -25,7 +25,7 @@ def get_template_entities(value: Template | float | None) -> list[str]:
 
     try:
         info: RenderInfo = value.async_render_to_info()
-    except TemplateError, TypeError:
+    except (TemplateError, TypeError):
         return []
 
     return list(info.entities)

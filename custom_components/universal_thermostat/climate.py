@@ -967,7 +967,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
-        old_state: State | None = event.data.get("old_state")
+        old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: target sensor not changed (%s) - no need to control",
@@ -1001,7 +1001,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         entity_id = event.data.get("entity_id")
-        old_state: State | None = event.data.get("old_state")
+        old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: thermostat template entity %s not changed (%s) - no need to control",
@@ -1030,7 +1030,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         entity_id = event.data.get("entity_id")
-        old_state: State | None = event.data.get("old_state")
+        old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: controller template entity %s not changed (%s) - no need to control",
@@ -1044,7 +1044,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             "%s: controller template entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
-            old_state.state if old_state else None,
+            old_state.state,
             new_state.state,
         )
         await self._async_control(reason=REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED)
@@ -1059,7 +1059,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         entity_id = event.data.get("entity_id")
-        old_state: State | None = event.data.get("old_state")
+        old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
             _LOGGER.info(
                 "%s: window entity %s not changed (%s) - no need to control",

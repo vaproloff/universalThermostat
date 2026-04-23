@@ -161,7 +161,7 @@ class NumberPidController(AbstractPidController):
     @property
     def _is_on(self) -> bool:
         if self._switch_entity_id is None:
-            return self.__running
+            return self.running
         return self._hass.states.is_state(
             self._switch_entity_id, STATE_ON if not self._switch_inverted else STATE_OFF
         )
@@ -254,7 +254,7 @@ class NumberPidController(AbstractPidController):
             reason,
         )
 
-        service = SERVICE_TURN_OFF if not self._inverted else SERVICE_TURN_ON
+        service = SERVICE_TURN_OFF if not self._switch_inverted else SERVICE_TURN_ON
         service_data = {ATTR_ENTITY_ID: self._switch_entity_id}
         await self._hass.services.async_call(
             domain=HOMEASSISTANT_DOMAIN,

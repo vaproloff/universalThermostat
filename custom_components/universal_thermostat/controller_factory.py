@@ -105,7 +105,7 @@ def create_controllers(
                     conf[CONF_PID_KP],
                     conf[CONF_PID_KI],
                     conf[CONF_PID_KD],
-                    conf[CONF_PID_SAMPLE_PERIOD],
+                    conf.get(CONF_PID_SAMPLE_PERIOD, None),
                     inverted,
                     keep_alive,
                     ignore_windows,
