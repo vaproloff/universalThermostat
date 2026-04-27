@@ -12,7 +12,7 @@
       },
       "options_notice": {
         "title": "Finish setup in options",
-        "description": "The thermostat \"{name}\" with {sensor} configured.\nPlease open the integration options after creation and add at least one controller. You can also configure other settings, HVAC modes, windows, and presets there."
+        "description": "The thermostat \"{name}\" with {sensor} configured.\n\nPlease open the integration options after creation and add at least one controller. You can also configure other settings, HVAC modes, windows, and presets there."
       }
     },
     "error": {
@@ -70,24 +70,31 @@
         }
       },
       "controller_config": {
-        "title": "Adding {controller_type}",
-        "description": "Add settings for your entity:\n{current_entity_id} ({controller_config_type})",
+        "title": "Configure {controller_type}",
+        "description": "Set options for your entity:\n{current_entity_id} ({controller_config_type})",
         "data": {
           "inverted": "Inverted state logic",
           "ignore_windows": "Ignore windows",
           "keep_alive": "Keep alive interval",
+          "clear_keep_alive": "Clear keep alive interval",
           "cold_tolerance": "Cold tolerance",
           "hot_tolerance": "Hot tolerance",
           "target_temp_delta": "Target temperature delta",
+          "clear_target_temp_delta": "Clear target temperature delta",
           "min_cycle_duration": "Minimum cycle duration",
+          "clear_min_cycle_duration": "Clear minimum cycle duration",
           "kp": "PID proportional coefficient",
           "ki": "PID integral coefficient",
           "kd": "PID derivative coefficient",
           "pid_sample_period": "PID constant sample time period",
+          "clear_pid_sample_period": "Clear PID constant sample time period",
           "pwm_period": "PWM period",
           "min": "Minimum PID value",
+          "clear_min": "Clear minimum PID value",
           "max": "Maximum PID value",
+          "clear_max": "Clear maximum PID value",
           "switch_entity_id": "Switch entity to toggle",
+          "clear_switch_entity_id": "Clear switch entity to toggle",
           "switch_inverted": "Inverted logic for switch entity"
         },
         "data_description": {
@@ -98,6 +105,13 @@
           "target_temp_delta": "Delta between Universal Thermostat and target climate entity set points",
           "min_cycle_duration": "Used to protect from on/off cycling",
           "pwm_period": "Switch will be turned on and turned off according internal PID output once in this period."
+        }
+      },
+      "controller_edit": {
+        "title": "Edit heater/cooler",
+        "description": "Choose controller you want to edit",
+        "data": {
+          "controller": "Controller"
         }
       },
       "controller_remove": {
@@ -134,6 +148,27 @@
           "window": "Window"
         }
       },
+      "window_edit": {
+        "title": "Edit window",
+        "description": "Choose window you want to edit",
+        "data": {
+          "window": "Window"
+        }
+      },
+      "window_config": {
+        "title": "Edit window",
+        "description": "Update window settings",
+        "data": {
+          "entity_id": "Pick entity",
+          "inverted": "Inverted",
+          "timeout": "Timeout",
+          "clear_timeout": "Clear timeout"
+        },
+        "data_description": {
+          "inverted": "Invert window logic",
+          "timeout": "Time period to wait until stop/start controller after window opening/closing"
+        }
+      },
       "presets_menu": {
         "title": "Presets",
         "description": "Presets:\n{presets}",
@@ -150,7 +185,7 @@
         }
       },
       "preset_config_temp_delta": {
-        "title": "Adding preset",
+        "title": "Configure preset",
         "description": "Configuring single temperature delta preset: {current_preset}",
         "data": {
           "temp_delta": "Target temperature delta"
@@ -160,7 +195,7 @@
         }
       },
       "preset_config_heat_cool_delta": {
-        "title": "Adding preset",
+        "title": "Configure preset",
         "description": "Configuring heating/cooling temperature deltas preset: {current_preset}",
         "data": {
           "heat_delta": "Heating target temperature delta",
@@ -168,12 +203,22 @@
         }
       },
       "preset_config_target_temp": {
-        "title": "Adding preset",
+        "title": "Configure preset",
         "description": "Configuring target temperatures preset: {current_preset}",
         "data": {
           "target_temp": "Single target temperature",
+          "clear_target_temp": "Clear single target temperature",
           "heat_target_temp": "Heating target temperature",
-          "cool_target_temp": "Cooling target temperature"
+          "clear_heat_target_temp": "Clear heating target temperature",
+          "cool_target_temp": "Cooling target temperature",
+          "clear_cool_target_temp": "Clear cooling target temperature"
+        }
+      },
+      "preset_edit": {
+        "title": "Edit preset",
+        "description": "Choose preset you want to edit",
+        "data": {
+          "preset": "Preset"
         }
       },
       "preset_remove": {
@@ -205,6 +250,7 @@
     "controllers_menu_selector": {
       "options": {
         "add": "Add heater or cooler",
+        "edit": "Edit heater or cooler",
         "remove": "Remove heater or cooler",
         "done": "Done"
       }
@@ -226,6 +272,7 @@
     "windows_menu_selector": {
       "options": {
         "add": "Add window",
+        "edit": "Edit window",
         "remove": "Remove window",
         "done": "Done"
       }
@@ -233,6 +280,7 @@
     "presets_menu_selector": {
       "options": {
         "add": "Add preset",
+        "edit": "Edit preset",
         "remove": "Remove preset",
         "done": "Done"
       }

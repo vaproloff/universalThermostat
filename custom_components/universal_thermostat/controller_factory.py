@@ -10,6 +10,7 @@ from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import CONF_ENTITY_ID
 from homeassistant.core import split_entity_id
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_CLIMATE_TEMP_DELTA,
@@ -57,7 +58,7 @@ def create_controllers(
 
         entity_id = conf[CONF_ENTITY_ID]
         inverted = conf.get(CONF_INVERTED, False)
-        keep_alive = conf.get(CONF_KEEP_ALIVE, None)
+        keep_alive = _cv_time_period(conf.get(CONF_KEEP_ALIVE, None))
         ignore_windows = conf.get(CONF_IGNORE_WINDOWS, False)
 
         domain = split_entity_id(entity_id)[0]
@@ -80,7 +81,7 @@ def create_controllers(
                     conf[CONF_PWM_SWITCH_PERIOD],
                 )
             else:
-                min_duration = conf.get(CONF_MIN_DUR, None)
+                min_duration = _cv_time_period(conf.get(CONF_MIN_DUR, None))
                 cold_tolerance = conf[CONF_COLD_TOLERANCE]
                 hot_tolerance = conf[CONF_HOT_TOLERANCE]
 
@@ -113,10 +114,10 @@ def create_controllers(
                     conf.get(CONF_PID_MAX, None),
                 )
             else:
-                min_duration = conf.get(CONF_MIN_DUR, None)
+                min_duration = _cv_time_period(conf.get(CONF_MIN_DUR, None))
                 cold_tolerance = conf[CONF_COLD_TOLERANCE]
                 hot_tolerance = conf[CONF_HOT_TOLERANCE]
-                temp_delta = conf[CONF_CLIMATE_TEMP_DELTA]
+                temp_delta = conf.get(CONF_CLIMATE_TEMP_DELTA, None)
 
                 controller = ClimateSwitchController(
                     name,
@@ -139,7 +140,7 @@ def create_controllers(
                 conf[CONF_PID_KP],
                 conf[CONF_PID_KI],
                 conf[CONF_PID_KD],
-                conf.get(CONF_PID_SAMPLE_PERIOD, None),
+                _cv_time_period(conf.get(CONF_PID_SAMPLE_PERIOD, None)),
                 inverted,
                 keep_alive,
                 ignore_windows,
@@ -158,3 +159,10 @@ def create_controllers(
             controllers.append(controller)
 
     return controllers
+
+
+def _cv_time_period(value: Any) -> Any:
+    """Convert a config flow duration dict to a time period."""
+    if value is None:
+        return None
+    return cv.positive_time_period(value)
