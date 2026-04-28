@@ -5,10 +5,7 @@ from datetime import timedelta
 import logging
 from typing import Any
 
-from custom_components.universal_thermostat.const import (
-    CONF_CLIMATE_TEMP_DELTA,
-    DEFAULT_CLIMATE_TEMP_DELTA,
-)
+from custom_components.universal_thermostat.const import CONF_CLIMATE_TEMP_DELTA
 from custom_components.universal_thermostat.template_utils import (
     get_template_entities,
     render_float,
@@ -71,17 +68,21 @@ class ClimateSwitchController(SwitchController):
         """Return controller's extra attributes for thermostat entity."""
         attrs = super().extra_state_attributes or {}
 
-        if self._temp_delta != DEFAULT_CLIMATE_TEMP_DELTA:
-            attrs[CONF_CLIMATE_TEMP_DELTA] = self._temp_delta
+        temp_delta = self._temp_delta
+        if temp_delta is not None:
+            attrs[CONF_CLIMATE_TEMP_DELTA] = temp_delta
 
         return attrs
 
     @property
     def _temp_delta(self) -> float | None:
         """Returns Temperature Delta."""
+        if self._temp_delta_template is None:
+            return None
+
         return render_float(
             self._temp_delta_template,
-            DEFAULT_CLIMATE_TEMP_DELTA,
+            0.0,
         )
 
     @property
@@ -220,7 +221,7 @@ class ClimateSwitchController(SwitchController):
             reason,
         )
 
-        if self._is_on:
+        if self._is_on and self._temp_delta is not None:
             await self._async_set_temperature(target_temp=target_temp, reason=reason)
 
     async def _async_set_temperature(self, target_temp: float, reason):
