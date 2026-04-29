@@ -4,6 +4,12 @@ import logging
 from typing import Any
 
 from custom_components.universal_thermostat.const import (
+    CONF_PRESET_COOL_DELTA,
+    CONF_PRESET_COOL_TARGET_TEMP,
+    CONF_PRESET_HEAT_DELTA,
+    CONF_PRESET_HEAT_TARGET_TEMP,
+    CONF_PRESET_TARGET_TEMP,
+    CONF_PRESET_TEMP_DELTA,
     DEFAULT_PRESET_AUTO_TEMP_DELTA,
     PRESET_NONE_HVAC_MODE,
     PRESET_NONE_TARGET_TEMP,
@@ -52,27 +58,63 @@ class Preset:
 
     @property
     def _temp_delta(self) -> float | None:
-        return render_float(self._temp_delta_template, None)
+        return render_float(
+            self._temp_delta_template,
+            None,
+            owner=f"{self._thermostat_entity_id} - preset:{self._name}",
+            field=CONF_PRESET_TEMP_DELTA,
+            logger=_LOGGER,
+        )
 
     @property
     def _heat_delta(self) -> float | None:
-        return render_float(self._heat_delta_template, None)
+        return render_float(
+            self._heat_delta_template,
+            None,
+            owner=f"{self._thermostat_entity_id} - preset:{self._name}",
+            field=CONF_PRESET_HEAT_DELTA,
+            logger=_LOGGER,
+        )
 
     @property
     def _cool_delta(self) -> float | None:
-        return render_float(self._cool_delta_template, None)
+        return render_float(
+            self._cool_delta_template,
+            None,
+            owner=f"{self._thermostat_entity_id} - preset:{self._name}",
+            field=CONF_PRESET_COOL_DELTA,
+            logger=_LOGGER,
+        )
 
     @property
     def _target_temp(self) -> float | None:
-        return render_float(self._target_temp_template, None)
+        return render_float(
+            self._target_temp_template,
+            None,
+            owner=f"{self._thermostat_entity_id} - preset:{self._name}",
+            field=CONF_PRESET_TARGET_TEMP,
+            logger=_LOGGER,
+        )
 
     @property
     def _heat_target_temp(self) -> float | None:
-        return render_float(self._heat_target_temp_template, None)
+        return render_float(
+            self._heat_target_temp_template,
+            None,
+            owner=f"{self._thermostat_entity_id} - preset:{self._name}",
+            field=CONF_PRESET_HEAT_TARGET_TEMP,
+            logger=_LOGGER,
+        )
 
     @property
     def _cool_target_temp(self) -> float | None:
-        return render_float(self._cool_target_temp_template, None)
+        return render_float(
+            self._cool_target_temp_template,
+            None,
+            owner=f"{self._thermostat_entity_id} - preset:{self._name}",
+            field=CONF_PRESET_COOL_TARGET_TEMP,
+            logger=_LOGGER,
+        )
 
     def get_hvac_mode(self, current_hvac_mode):
         """Return preset HVAC mode according to preset config."""
@@ -249,7 +291,7 @@ class Preset:
             _LOGGER.debug(
                 "%s - preset_ctrl: target_temp defined - setting target_temp_low to %s",
                 self._thermostat_entity_id,
-                self._heat_target_temp,
+                self._target_temp,
             )
             return self._target_temp
 
@@ -386,10 +428,11 @@ class PresetController:
 
     async def async_added_to_hass(self, thermostat_entity_id: str):
         """Process presets when adding thermostat entity."""
+        self._thermostat_entity_id = thermostat_entity_id
         for preset in self._presets:
             preset.thermostat = thermostat_entity_id
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "%s: presets ready, supported presets: %s",
             self._thermostat_entity_id,
             self._preset_modes,

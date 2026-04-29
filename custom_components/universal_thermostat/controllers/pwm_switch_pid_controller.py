@@ -124,7 +124,7 @@ class PwmSwitchPidController(AbstractPidController):
             output = int((PWM_SWITCH_MIN_VALUE + PWM_SWITCH_MAX_VALUE) / 2)
             await self._apply_output(output)
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "%s - %s: setting up PWM switch. PWM value: %s, period: %s, last control: [state: %s, time: %s], check PWM control every %s",
             self._thermostat.entity_id,
             self.name,

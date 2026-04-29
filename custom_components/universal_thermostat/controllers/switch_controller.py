@@ -80,12 +80,24 @@ class SwitchController(AbstractController):
     @property
     def _cold_tolerance(self) -> float:
         """Returns Cold tolerance."""
-        return render_float(self._cold_tolerance_template, DEFAULT_COLD_TOLERANCE)
+        return render_float(
+            self._cold_tolerance_template,
+            DEFAULT_COLD_TOLERANCE,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_COLD_TOLERANCE,
+            logger=_LOGGER,
+        )
 
     @property
     def _hot_tolerance(self) -> float:
         """Returns Hot tolerance."""
-        return render_float(self._hot_tolerance_template, DEFAULT_HOT_TOLERANCE)
+        return render_float(
+            self._hot_tolerance_template,
+            DEFAULT_HOT_TOLERANCE,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_HOT_TOLERANCE,
+            logger=_LOGGER,
+        )
 
     @property
     def _is_on(self) -> bool:
@@ -96,8 +108,23 @@ class SwitchController(AbstractController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-        tracked_entities.extend(get_template_entities(self._cold_tolerance_template))
-        tracked_entities.extend(get_template_entities(self._hot_tolerance_template))
+        owner = f"{self._thermostat.entity_id} - {self.name}"
+        tracked_entities.extend(
+            get_template_entities(
+                self._cold_tolerance_template,
+                owner=owner,
+                field=CONF_COLD_TOLERANCE,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._hot_tolerance_template,
+                owner=owner,
+                field=CONF_HOT_TOLERANCE,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     async def _async_turn_on(self, reason):

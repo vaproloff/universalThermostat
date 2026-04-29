@@ -91,6 +91,9 @@ class ClimatePidController(AbstractPidController):
         min_output = render_float(
             self._min_output_template,
             self._default_min_output,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_MIN,
+            logger=_LOGGER,
         )
 
         return max(min_output, self._default_min_output)
@@ -102,7 +105,7 @@ class ClimatePidController(AbstractPidController):
         if state:
             try:
                 return float(state.attributes.get(ATTR_MIN_TEMP))
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity min_temp to float: %s. Error: %s",
                     self._thermostat.entity_id,
@@ -125,6 +128,9 @@ class ClimatePidController(AbstractPidController):
         max_output = render_float(
             self._max_output_template,
             self._default_max_output,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_MAX,
+            logger=_LOGGER,
         )
 
         return min(max_output, self._default_max_output)
@@ -136,7 +142,7 @@ class ClimatePidController(AbstractPidController):
         if state:
             try:
                 return float(state.attributes.get(ATTR_MAX_TEMP))
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity max_temp to float: %s. Error: %s",
                     self._thermostat.entity_id,
@@ -176,8 +182,23 @@ class ClimatePidController(AbstractPidController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-        tracked_entities.extend(get_template_entities(self._min_output_template))
-        tracked_entities.extend(get_template_entities(self._max_output_template))
+        owner = f"{self._thermostat.entity_id} - {self.name}"
+        tracked_entities.extend(
+            get_template_entities(
+                self._min_output_template,
+                owner=owner,
+                field=CONF_PID_MIN,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._max_output_template,
+                owner=owner,
+                field=CONF_PID_MAX,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     def _adapt_pid_output(self, value: float) -> float:
@@ -191,7 +212,7 @@ class ClimatePidController(AbstractPidController):
             if step:
                 try:
                     step = float(step)
-                except ValueError as e:
+                except (TypeError, ValueError) as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert climate temp_step value to float: %s. Return default: %s. Error: %s",
                         self._thermostat.entity_id,
@@ -210,7 +231,7 @@ class ClimatePidController(AbstractPidController):
         if state:
             try:
                 return float(state.attributes.get(ATTR_TEMPERATURE))
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target_temp value to float: %s. Error: %s",
                     self._thermostat.entity_id,

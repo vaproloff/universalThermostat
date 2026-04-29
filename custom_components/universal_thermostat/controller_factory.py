@@ -156,6 +156,18 @@ def create_controllers(
             )
 
         if controller:
+            _LOGGER.debug(
+                "Created %s controller %s (%s): mode=%s, entity_id=%s, "
+                "keep_alive=%s, ignore_windows=%s, inverted=%s",
+                prefix,
+                name,
+                controller.__class__.__name__,
+                mode,
+                entity_id,
+                keep_alive,
+                ignore_windows,
+                inverted,
+            )
             controllers.append(controller)
 
     return controllers

@@ -138,7 +138,7 @@ class AbstractController(abc.ABC):
         self._hass = hass
 
         if self._keep_alive:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s - %s: setting up keep_alive (%s)",
                 self._thermostat.entity_id,
                 self.name,
@@ -232,7 +232,15 @@ class AbstractController(abc.ABC):
 
         if not self.__running:
             await self._async_ensure_not_running()
-        elif None not in (cur_temp, target_temp):
+        elif None in (cur_temp, target_temp):
+            _LOGGER.debug(
+                "%s - %s: skipping control, current: %s, target: %s",
+                self._thermostat.entity_id,
+                self.name,
+                cur_temp,
+                target_temp,
+            )
+        else:
             await self._async_control(
                 cur_temp,
                 target_temp,

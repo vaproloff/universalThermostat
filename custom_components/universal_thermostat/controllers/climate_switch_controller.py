@@ -83,6 +83,9 @@ class ClimateSwitchController(SwitchController):
         return render_float(
             self._temp_delta_template,
             0.0,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_CLIMATE_TEMP_DELTA,
+            logger=_LOGGER,
         )
 
     @property
@@ -130,7 +133,14 @@ class ClimateSwitchController(SwitchController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-        tracked_entities.extend(get_template_entities(self._temp_delta_template))
+        tracked_entities.extend(
+            get_template_entities(
+                self._temp_delta_template,
+                owner=f"{self._thermostat.entity_id} - {self.name}",
+                field=CONF_CLIMATE_TEMP_DELTA,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     async def _async_turn_on(self, reason):
@@ -191,7 +201,7 @@ class ClimateSwitchController(SwitchController):
             if step:
                 try:
                     step = float(step)
-                except ValueError as e:
+                except (TypeError, ValueError) as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert climate temp_step value to float: %s. Return default: %s. Error: %s",
                         self._thermostat.entity_id,
@@ -257,8 +267,8 @@ class ClimateSwitchController(SwitchController):
             "%s - %s: changing target_temp for %s to %s (%s)",
             self._thermostat.entity_id,
             self.name,
-            target_temp,
             self._target_entity_id,
+            target_temp,
             reason,
         )
 

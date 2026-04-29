@@ -14,6 +14,21 @@ from homeassistant.helpers.template import Template
 
 _LOGGER = logging.getLogger(__name__)
 
+_WINDOW_TIMEOUT_WARNINGS: set[tuple[str, str, str]] = set()
+
+
+def _warning_once(
+    warning_key: tuple[str, str, str],
+    message: str,
+    *args: Any,
+) -> None:
+    """Log a warning once for a repeated window timeout problem."""
+    if warning_key in _WINDOW_TIMEOUT_WARNINGS:
+        return
+
+    _WINDOW_TIMEOUT_WARNINGS.add(warning_key)
+    _LOGGER.warning(message, *args)
+
 
 class Window:
     """Window entity."""
@@ -42,7 +57,8 @@ class Window:
                 try:
                     timeout = self._timeout.async_render(parse_result=False)
                 except (TemplateError, TypeError) as e:
-                    _LOGGER.warning(
+                    _warning_once(
+                        (self.entity_id, "render", str(self._timeout)),
                         "%s: unable to render window's timeout template: %s. Error: %s",
                         self.entity_id,
                         self._timeout,
@@ -52,11 +68,13 @@ class Window:
 
                 try:
                     return cv.positive_time_period(timeout)
-                except vol.Invalid:
-                    _LOGGER.warning(
-                        "%s: unable to validate window's timeout template value: %s",
+                except vol.Invalid as e:
+                    _warning_once(
+                        (self.entity_id, "validate", str(self._timeout)),
+                        "%s: unable to validate window's timeout template value: %s. Error: %s",
                         self.entity_id,
                         self._timeout,
+                        e,
                     )
                     return None
 
@@ -114,15 +132,16 @@ class WindowController:
         """If any of windows is opened."""
         for window in self._windows:
             is_now_opened = self._is_window_opened(window)
+            timeout = window.timeout
 
-            if window.timeout is not None:
+            if timeout is not None:
                 if (
                     is_now_opened
                     and condition.state(
                         self._hass,
                         window.entity_id,
                         STATE_ON if not window.inverted else STATE_OFF,
-                        window.timeout,
+                        timeout,
                     )
                 ) or (
                     not is_now_opened
@@ -130,7 +149,7 @@ class WindowController:
                         self._hass,
                         window.entity_id,
                         STATE_OFF if not window.inverted else STATE_ON,
-                        window.timeout,
+                        timeout,
                     )
                 ):
                     return True
@@ -143,9 +162,11 @@ class WindowController:
     @property
     def max_timeout(self):
         """Return maximum timeout of all windows."""
-        timeouts = [
-            window.timeout for window in self._windows if window.timeout is not None
-        ]
+        timeouts = []
+        for window in self._windows:
+            timeout = window.timeout
+            if timeout is not None:
+                timeouts.append(timeout)
         if timeouts:
             return max(timeouts)
         return None

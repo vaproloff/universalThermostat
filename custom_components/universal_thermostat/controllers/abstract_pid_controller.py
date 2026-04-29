@@ -105,6 +105,9 @@ class AbstractPidController(AbstractController, abc.ABC):
         pid_kp = render_float(
             self._pid_kp_template,
             DEFAULT_PID_KP,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_KP,
+            logger=_LOGGER,
         )
 
         if self._mode == HVACMode.COOL:
@@ -121,6 +124,9 @@ class AbstractPidController(AbstractController, abc.ABC):
         pid_ki = render_float(
             self._pid_ki_template,
             DEFAULT_PID_KI,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_KI,
+            logger=_LOGGER,
         )
 
         if self._mode == HVACMode.COOL:
@@ -137,6 +143,9 @@ class AbstractPidController(AbstractController, abc.ABC):
         pid_kd = render_float(
             self._pid_kd_template,
             DEFAULT_PID_KD,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_KD,
+            logger=_LOGGER,
         )
 
         if self._mode == HVACMode.COOL:
@@ -152,7 +161,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         await super().async_added_to_hass(hass, attrs)
 
         if self._pid_sample_period:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s - %s: setting up PID regulator - static period mode (%s)",
                 self._thermostat.entity_id,
                 self.name,
@@ -164,7 +173,7 @@ class AbstractPidController(AbstractController, abc.ABC):
                 )
             )
         else:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s - %s: setting up PID regulator - dynamic period mode on sensor changes",
                 self._thermostat.entity_id,
                 self.name,
@@ -173,9 +182,31 @@ class AbstractPidController(AbstractController, abc.ABC):
     def get_used_template_entity_ids(self) -> list[str]:
         """Get template entitites to track state."""
         tracked_entities = super().get_used_template_entity_ids()
-        tracked_entities.extend(get_template_entities(self._pid_kp_template))
-        tracked_entities.extend(get_template_entities(self._pid_ki_template))
-        tracked_entities.extend(get_template_entities(self._pid_kd_template))
+        owner = f"{self._thermostat.entity_id} - {self.name}"
+        tracked_entities.extend(
+            get_template_entities(
+                self._pid_kp_template,
+                owner=owner,
+                field=CONF_PID_KP,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._pid_ki_template,
+                owner=owner,
+                field=CONF_PID_KI,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._pid_kd_template,
+                owner=owner,
+                field=CONF_PID_KD,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     @final
@@ -340,7 +371,9 @@ class AbstractPidController(AbstractController, abc.ABC):
 
             output = self._adapt_pid_output(output)
             output = self._round_to_target_precision(output)
-            current_output = self._round_to_target_precision(self._get_current_output())
+            current_output = self._get_current_output()
+            if current_output is not None:
+                current_output = self._round_to_target_precision(current_output)
 
             if current_output != output:
                 _LOGGER.debug(

@@ -1,9 +1,6 @@
 """PID Controller."""
 
-import logging
 import time
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class PIDController:
@@ -149,7 +146,6 @@ class PIDController:
 
     def reset(self):
         """Reset all PID parameters."""
-        _LOGGER.debug("PID RESET")
         self._p_term = 0
         self._i_term = 0
         self._d_term = 0

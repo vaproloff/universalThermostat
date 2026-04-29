@@ -94,7 +94,7 @@ _LOGGER = logging.getLogger(__name__)
 def _create_thermostat_entity(
     hass: HomeAssistant,
     config: dict[str, Any],
-) -> UniversalThermostat:
+) -> "UniversalThermostat":
     """Create thermostat entity from config-like mapping."""
     name = config.get(CONF_NAME)
     sensor_entity_id = config.get(CONF_SENSOR)
@@ -413,6 +413,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         return render_float(
             self._auto_cool_delta_template,
             DEFAULT_AUTO_COOL_DELTA,
+            owner=self.entity_id,
+            field=CONF_AUTO_COOL_DELTA,
+            logger=_LOGGER,
         )
 
     @property
@@ -421,6 +424,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         return render_float(
             self._auto_heat_delta_template,
             DEFAULT_AUTO_HEAT_DELTA,
+            owner=self.entity_id,
+            field=CONF_AUTO_HEAT_DELTA,
+            logger=_LOGGER,
         )
 
     @property
@@ -557,11 +563,21 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         ):
             await self._async_update_temp(sensor_state.state)
             self.async_write_ha_state()
+        else:
+            sensor_value = sensor_state.state if sensor_state else None
+            _LOGGER.debug(
+                "%s: skipping initial sensor update for %s because state is %s",
+                self.entity_id,
+                self.sensor_entity_id,
+                sensor_value,
+            )
 
         _LOGGER.info(
-            "%s: thermostat ready, supported HVAC modes: %s",
+            "%s: thermostat ready, sensor: %s, supported HVAC modes: %s, controllers: %s",
             self.entity_id,
+            self.sensor_entity_id,
             self._hvac_list,
+            [controller.name for controller in self._controllers],
         )
 
         self.hass.create_task(self._async_first_run())
@@ -571,6 +587,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         if self.hass.state == CoreState.running:
             await self._async_startup()
         else:
+            _LOGGER.debug(
+                "%s: Home Assistant is not running yet; startup delayed until %s",
+                self.entity_id,
+                EVENT_HOMEASSISTANT_START,
+            )
             self.hass.bus.async_listen_once(
                 EVENT_HOMEASSISTANT_START,
                 self._async_startup,
@@ -730,8 +751,22 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     def _get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = []
-        tracked_entities.extend(get_template_entities(self._auto_cool_delta_template))
-        tracked_entities.extend(get_template_entities(self._auto_heat_delta_template))
+        tracked_entities.extend(
+            get_template_entities(
+                self._auto_cool_delta_template,
+                owner=self.entity_id,
+                field=CONF_AUTO_COOL_DELTA,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._auto_heat_delta_template,
+                owner=self.entity_id,
+                field=CONF_AUTO_HEAT_DELTA,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     async def async_turn_on(self) -> None:
@@ -744,11 +779,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def async_set_hvac_mode(self, hvac_mode) -> None:
         """Set hvac mode."""
         if hvac_mode not in self._hvac_list:
-            _LOGGER.error("%s: unsupported hvac mode: %s", self.entity_id, hvac_mode)
+            _LOGGER.warning("%s: unsupported hvac mode: %s", self.entity_id, hvac_mode)
             return
 
         if hvac_mode == self._hvac_mode:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: no need to control. HVAC mode %s already set",
                 self.entity_id,
                 hvac_mode,
@@ -756,7 +791,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         if self._preset_ctrl is not None:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: HVAC mode is to be changed. Resetting preset to None",
                 self.entity_id,
             )
@@ -797,7 +832,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             new_hvac_mode == HVACMode.HEAT_COOL
             and self._last_active_hvac_mode != HVACMode.HEAT_COOL
         ):
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: hvac_mode changed to %s: calculating ranged target temperatures",
                 self.entity_id,
                 new_hvac_mode,
@@ -825,7 +860,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             new_hvac_mode in (HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO)
             and self._last_active_hvac_mode == HVACMode.HEAT_COOL
         ):
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: hvac_mode changed to %s: calculating target temperature",
                 self.entity_id,
                 new_hvac_mode,
@@ -880,7 +915,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         if preset_mode == self.preset_mode:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: no need to change preset: %s already set",
                 self.entity_id,
                 self.preset_mode,
@@ -898,7 +933,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         new_hvac_mode = self._preset_ctrl.get_hvac_mode(self._hvac_mode)
         if new_hvac_mode in self._hvac_list and self._hvac_mode != new_hvac_mode:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: preset %s settings needs to change hvac mode to %s",
                 self.entity_id,
                 preset_mode,
@@ -916,7 +951,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp, float)
                 and self._target_temp != new_target_temp
             ):
-                _LOGGER.info(
+                _LOGGER.debug(
                     "%s: preset %s settings needs to change target temperature to %s",
                     self.entity_id,
                     preset_mode,
@@ -932,7 +967,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp_low, float)
                 and self._target_temp_low != new_target_temp_low
             ):
-                _LOGGER.info(
+                _LOGGER.debug(
                     "%s: preset %s settings needs to change low target temperature to %s",
                     self.entity_id,
                     preset_mode,
@@ -947,7 +982,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 isinstance(new_target_temp_high, float)
                 and self._target_temp_high != new_target_temp_high
             ):
-                _LOGGER.info(
+                _LOGGER.debug(
                     "%s: preset %s settings needs to change high target temperature to %s",
                     self.entity_id,
                     preset_mode,
@@ -964,12 +999,25 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     async def _async_sensor_changed(self, event: Event[EventStateChangedData]) -> None:
         """Handle temperature changes."""
         new_state: State | None = event.data.get("new_state")
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if new_state is None:
+            _LOGGER.debug(
+                "%s: target sensor state change event has no new state",
+                self.entity_id,
+            )
+            return
+
+        if new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            _LOGGER.debug(
+                "%s: target sensor %s is %s; skipping control",
+                self.entity_id,
+                new_state.entity_id,
+                new_state.state,
+            )
             return
 
         old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: target sensor not changed (%s) - no need to control",
                 self.entity_id,
                 new_state.state,
@@ -977,7 +1025,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         old_state_value = old_state.state if old_state is not None else None
-        _LOGGER.info(
+        _LOGGER.debug(
             "%s: target sensor changed (%s -> %s)",
             self.entity_id,
             old_state_value,
@@ -990,7 +1038,18 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_controller_target_entities_changed(self, event) -> None:
         """Handle controller target entities changes."""
-        _ = event
+        entity_id = event.data.get("entity_id")
+        old_state: State | None = event.data.get("old_state", None)
+        new_state: State | None = event.data.get("new_state", None)
+        old_state_value = old_state.state if old_state is not None else None
+        new_state_value = new_state.state if new_state is not None else None
+        _LOGGER.debug(
+            "%s: controller target entity %s changed (%s -> %s); writing state",
+            self.entity_id,
+            entity_id,
+            old_state_value,
+            new_state_value,
+        )
         self.async_write_ha_state()
 
     async def _async_template_entities_changed(
@@ -998,13 +1057,28 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     ) -> None:
         """Handle thermostat template entities changes."""
         new_state: State | None = event.data.get("new_state")
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        entity_id = event.data.get("entity_id")
+
+        if new_state is None:
+            _LOGGER.debug(
+                "%s: thermostat template entity %s event has no new state",
+                self.entity_id,
+                entity_id,
+            )
             return
 
-        entity_id = event.data.get("entity_id")
+        if new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            _LOGGER.debug(
+                "%s: thermostat template entity %s is %s; skipping control",
+                self.entity_id,
+                entity_id,
+                new_state.state,
+            )
+            return
+
         old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: thermostat template entity %s not changed (%s) - no need to control",
                 self.entity_id,
                 entity_id,
@@ -1013,7 +1087,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         old_state_value = old_state.state if old_state is not None else None
-        _LOGGER.info(
+        _LOGGER.debug(
             "%s: thermostat template entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
@@ -1029,13 +1103,28 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     ) -> None:
         """Handle controller template entities changes."""
         new_state: State | None = event.data.get("new_state")
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        entity_id = event.data.get("entity_id")
+
+        if new_state is None:
+            _LOGGER.debug(
+                "%s: controller template entity %s event has no new state",
+                self.entity_id,
+                entity_id,
+            )
             return
 
-        entity_id = event.data.get("entity_id")
+        if new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            _LOGGER.debug(
+                "%s: controller template entity %s is %s; skipping control",
+                self.entity_id,
+                entity_id,
+                new_state.state,
+            )
+            return
+
         old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: controller template entity %s not changed (%s) - no need to control",
                 self.entity_id,
                 entity_id,
@@ -1044,7 +1133,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         old_state_value = old_state.state if old_state is not None else None
-        _LOGGER.info(
+        _LOGGER.debug(
             "%s: controller template entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
@@ -1060,13 +1149,28 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
     ) -> None:
         """Handle windows entities changes."""
         new_state: State | None = event.data.get("new_state")
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        entity_id = event.data.get("entity_id")
+
+        if new_state is None:
+            _LOGGER.debug(
+                "%s: window entity %s event has no new state",
+                self.entity_id,
+                entity_id,
+            )
             return
 
-        entity_id = event.data.get("entity_id")
+        if new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            _LOGGER.debug(
+                "%s: window entity %s is %s; skipping control",
+                self.entity_id,
+                entity_id,
+                new_state.state,
+            )
+            return
+
         old_state: State | None = event.data.get("old_state", None)
         if old_state is not None and old_state.state == new_state.state:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s: window entity %s not changed (%s) - no need to control",
                 self.entity_id,
                 entity_id,
@@ -1075,7 +1179,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             return
 
         old_state_value = old_state.state if old_state is not None else None
-        _LOGGER.info(
+        _LOGGER.debug(
             "%s: window entity %s changed (%s -> %s)",
             self.entity_id,
             entity_id,
@@ -1084,11 +1188,26 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         )
 
         window = self._window_ctrl.find_by_entity_id(entity_id)
-        if window.timeout is not None:
+        if window is None:
+            _LOGGER.debug(
+                "%s: window entity %s is no longer configured; skipping control",
+                self.entity_id,
+                entity_id,
+            )
+            return
+
+        window_timeout = window.timeout
+        if window_timeout is not None:
+            _LOGGER.debug(
+                "%s: scheduling delayed control for window entity %s after %s",
+                self.entity_id,
+                entity_id,
+                window_timeout,
+            )
             self.async_on_remove(
                 async_call_later(
                     self.hass,
-                    window.timeout,
+                    window_timeout,
                     self._async_window_delayed_control,
                 )
             )
@@ -1096,24 +1215,30 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             await self._async_window_delayed_control()
 
     async def _async_window_delayed_control(self) -> None:
+        _LOGGER.debug("%s: running delayed window control", self.entity_id)
         await self._async_control(reason=REASON_WINDOW_ENTITY_CHANGED)
         self.async_write_ha_state()
 
     async def _async_update_temp(self, temp) -> None:
         """Update thermostat with latest state from sensor."""
         if temp in (STATE_UNAVAILABLE, STATE_UNKNOWN, None):
+            _LOGGER.debug(
+                "%s: sensor value is %s; current temperature cleared",
+                self.entity_id,
+                temp,
+            )
             self._cur_temp = None
             return
 
         try:
             temp = float(temp)
-        except TypeError as e:
-            _LOGGER.error("%s: unable to update from sensor: %s", self.entity_id, e)
+        except (TypeError, ValueError) as e:
+            _LOGGER.warning("%s: unable to update from sensor: %s", self.entity_id, e)
             self._cur_temp = None
             return
 
         if math.isnan(temp) or math.isinf(temp):
-            _LOGGER.error("%s: sensor has illegal value %s", self.entity_id, temp)
+            _LOGGER.warning("%s: sensor has illegal value %s", self.entity_id, temp)
             self._cur_temp = None
             return
 
@@ -1189,6 +1314,11 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
             elif self._hvac_mode == HVACMode.OFF:
                 # Skip control, last `OFF` was already processed
+                _LOGGER.debug(
+                    "%s: skipping control because HVAC mode %s is already processed",
+                    self.entity_id,
+                    self._hvac_mode,
+                )
                 return
 
             is_windows_opened = False
@@ -1205,7 +1335,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 )
 
                 if self._should_stop_controller(controller, is_windows_opened):
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "%s: stopping %s, %s",
                         self.entity_id,
                         controller.name,
@@ -1215,7 +1345,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     continue
 
                 if self._should_start_controller(controller, is_windows_opened):
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "%s: starting %s, %s",
                         self.entity_id,
                         controller.name,
