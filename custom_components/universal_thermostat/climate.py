@@ -1,5 +1,7 @@
 """Adds support for universal thermostat units."""
 
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Mapping
 import logging
@@ -94,7 +96,7 @@ _LOGGER = logging.getLogger(__name__)
 def _create_thermostat_entity(
     hass: HomeAssistant,
     config: dict[str, Any],
-) -> "UniversalThermostat":
+) -> UniversalThermostat:
     """Create thermostat entity from config-like mapping."""
     name = config.get(CONF_NAME)
     sensor_entity_id = config.get(CONF_SENSOR)
@@ -798,7 +800,8 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             self._preset_ctrl.set_preset(PRESET_NONE)
             self._preset_ctrl.reset_saved()
 
-        self._toggle_target_temps(hvac_mode)
+        old_hvac_mode = self._hvac_mode
+        self._toggle_target_temps(old_hvac_mode, hvac_mode)
         self._hvac_mode = hvac_mode
         self._set_support_flags()
 
@@ -826,43 +829,54 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
         return value
 
-    def _toggle_target_temps(self, new_hvac_mode: HVACMode) -> None:
+    def _toggle_target_temps(
+        self, old_hvac_mode: HVACMode | None, new_hvac_mode: HVACMode
+    ) -> None:
         """Sync non-ranged with ranged target temperatures if necessary."""
+        source_hvac_mode = old_hvac_mode
+        if source_hvac_mode in (None, HVACMode.OFF):
+            source_hvac_mode = self._last_active_hvac_mode
+
+        target_temp = self._target_temp
+        if target_temp is None:
+            target_temp = self._default_target_temp
+
         if (
             new_hvac_mode == HVACMode.HEAT_COOL
-            and self._last_active_hvac_mode != HVACMode.HEAT_COOL
+            and source_hvac_mode != HVACMode.HEAT_COOL
         ):
             _LOGGER.debug(
-                "%s: hvac_mode changed to %s: calculating ranged target temperatures",
+                "%s: hvac_mode changed from %s to %s: calculating ranged target temperatures",
                 self.entity_id,
+                source_hvac_mode,
                 new_hvac_mode,
             )
-            match self._last_active_hvac_mode:
-                case HVACMode.COOL:
-                    self._target_temp_high = self._target_temp
-                    self._target_temp_low = self._round_to_target_precision(
-                        self._target_temp - self._auto_heat_delta
-                    )
-                case HVACMode.HEAT:
-                    self._target_temp_low = self._target_temp
-                    self._target_temp_high = self._round_to_target_precision(
-                        self._target_temp + self._auto_cool_delta
-                    )
-                case HVACMode.AUTO:
-                    self._target_temp_low = self._round_to_target_precision(
-                        self._target_temp - self._auto_heat_delta
-                    )
-                    self._target_temp_high = self._round_to_target_precision(
-                        self._target_temp + self._auto_cool_delta
-                    )
+            if source_hvac_mode == HVACMode.COOL:
+                self._target_temp_high = target_temp
+                self._target_temp_low = self._round_to_target_precision(
+                    target_temp - self._auto_heat_delta
+                )
+            elif source_hvac_mode == HVACMode.HEAT:
+                self._target_temp_low = target_temp
+                self._target_temp_high = self._round_to_target_precision(
+                    target_temp + self._auto_cool_delta
+                )
+            else:
+                self._target_temp_low = self._round_to_target_precision(
+                    target_temp - self._auto_heat_delta
+                )
+                self._target_temp_high = self._round_to_target_precision(
+                    target_temp + self._auto_cool_delta
+                )
 
         elif (
             new_hvac_mode in (HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO)
-            and self._last_active_hvac_mode == HVACMode.HEAT_COOL
+            and source_hvac_mode == HVACMode.HEAT_COOL
         ):
             _LOGGER.debug(
-                "%s: hvac_mode changed to %s: calculating target temperature",
+                "%s: hvac_mode changed from %s to %s: calculating target temperature",
                 self.entity_id,
+                source_hvac_mode,
                 new_hvac_mode,
             )
             match new_hvac_mode:
@@ -874,6 +888,44 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                     self._target_temp = self._round_to_target_precision(
                         (self._target_temp_low + self._target_temp_high) / 2
                     )
+
+        elif new_hvac_mode == HVACMode.AUTO and source_hvac_mode in (
+            HVACMode.HEAT,
+            HVACMode.COOL,
+        ):
+            _LOGGER.debug(
+                "%s: hvac_mode changed from %s to %s: calculating auto target temperature",
+                self.entity_id,
+                source_hvac_mode,
+                new_hvac_mode,
+            )
+            if source_hvac_mode == HVACMode.HEAT:
+                self._target_temp = self._round_to_target_precision(
+                    target_temp + self._auto_heat_delta
+                )
+            else:
+                self._target_temp = self._round_to_target_precision(
+                    target_temp - self._auto_cool_delta
+                )
+
+        elif source_hvac_mode == HVACMode.AUTO and new_hvac_mode in (
+            HVACMode.HEAT,
+            HVACMode.COOL,
+        ):
+            _LOGGER.debug(
+                "%s: hvac_mode changed from %s to %s: calculating target temperature",
+                self.entity_id,
+                source_hvac_mode,
+                new_hvac_mode,
+            )
+            if new_hvac_mode == HVACMode.HEAT:
+                self._target_temp = self._round_to_target_precision(
+                    target_temp - self._auto_heat_delta
+                )
+            else:
+                self._target_temp = self._round_to_target_precision(
+                    target_temp + self._auto_cool_delta
+                )
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -939,8 +991,9 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 preset_mode,
                 new_hvac_mode,
             )
+            old_hvac_mode = self._hvac_mode
+            self._toggle_target_temps(old_hvac_mode, new_hvac_mode)
             self._hvac_mode = new_hvac_mode
-            self._toggle_target_temps(new_hvac_mode)
             self._set_support_flags()
 
         if self._support_flags & ClimateEntityFeature.TARGET_TEMPERATURE:
