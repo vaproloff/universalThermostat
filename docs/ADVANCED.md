@@ -4,6 +4,8 @@ This document describes advanced configuration options for Universal Thermostat.
 
 👉 If you're new — start with the main README first.
 
+For a user-friendly explanation of runtime behavior, see [Behavior Guide](./BEHAVIOR.md).
+
 ## Supported Devices & Control Modes
 
 Universal Thermostat supports multiple device types with different control strategies.

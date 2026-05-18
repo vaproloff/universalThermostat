@@ -134,6 +134,8 @@ Supports:
 
 Behavior adapts automatically based on configured devices.
 
+Learn how modes, target temperatures, and controllers behave: [Behavior Guide](./docs/BEHAVIOR.md)
+
 👉 Details: [Advanced Configuration](./docs/ADVANCED.md)
 
 ## 📚 Advanced Configuration
