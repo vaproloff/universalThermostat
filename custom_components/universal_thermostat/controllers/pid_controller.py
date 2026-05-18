@@ -2,6 +2,8 @@
 
 import time
 
+INTEGRAL_LIMITS = (-100, 100)
+
 
 class PIDController:
     """PID Controller."""
@@ -61,7 +63,7 @@ class PIDController:
 
         # Calculate I
         self._i_term += self._ki * error * delta_time
-        self._i_term = self.clamp_value(self._i_term, self._output_limits)
+        self._i_term = self.clamp_value(self._i_term, INTEGRAL_LIMITS)
 
         # Calculate D
         self._d_term = 0
