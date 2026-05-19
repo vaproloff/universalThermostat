@@ -74,11 +74,11 @@ def create_controllers(
                     conf[CONF_PID_KP],
                     conf[CONF_PID_KI],
                     conf[CONF_PID_KD],
-                    conf.get(CONF_PID_SAMPLE_PERIOD, None),
+                    _cv_time_period(conf.get(CONF_PID_SAMPLE_PERIOD, None)),
                     inverted,
                     keep_alive,
                     ignore_windows,
-                    conf[CONF_PWM_SWITCH_PERIOD],
+                    _cv_time_period(conf[CONF_PWM_SWITCH_PERIOD]),
                 )
             else:
                 min_duration = _cv_time_period(conf.get(CONF_MIN_DUR, None))
@@ -106,7 +106,7 @@ def create_controllers(
                     conf[CONF_PID_KP],
                     conf[CONF_PID_KI],
                     conf[CONF_PID_KD],
-                    conf.get(CONF_PID_SAMPLE_PERIOD, None),
+                    _cv_time_period(conf.get(CONF_PID_SAMPLE_PERIOD, None)),
                     inverted,
                     keep_alive,
                     ignore_windows,

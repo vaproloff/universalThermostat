@@ -244,8 +244,8 @@ Supported domains: `switch`,`input_boolean`
   * `current_temp <= target_temp - cold_tolerance` - for heater,
   * `current_temp >= target_temp + hot_tolerance` - fo cooler.
 * Switch entity will be turned off when:
-  * `current_temp <= target_temp - cold_tolerance` - for heater,
-  * `current_temp >= target_temp + hot_tolerance` - fo cooler.
+  * `current_temp >= target_temp + hot_tolerance` - for heater,
+  * `current_temp <= target_temp - cold_tolerance` - fo cooler.
 * No changes will be performed if config `min_cycle_duration` was set and enough time was not passed since last switch.
 * Behavior on/off will be inverted if `inverted` config option was set to `true`.
 
@@ -299,8 +299,8 @@ Supported domains: `climate`
   * `current_temp <= target_temp - cold_tolerance` - for heater,
   * `current_temp >= target_temp + hot_tolerance` - fo cooler.
 * Climate entity will be turned off when:
-  * `current_temp <= target_temp - cold_tolerance` - for heater,
-  * `current_temp >= target_temp + hot_tolerance` - fo cooler.
+  * `current_temp >= target_temp + hot_tolerance` - for heater,
+  * `current_temp <= target_temp - cold_tolerance` - fo cooler.
 * Climate entity temperature set point will be adjusted taking `target_temp_delta` into account if it specified:
   * thermostat's `target_temp` + `target_temp_delta` - for heaters;
   * thermostat's `target_temp` - `target_temp_delta` - for coolers;

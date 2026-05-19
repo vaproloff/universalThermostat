@@ -276,7 +276,13 @@ DATA_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_HEAT_COOL_DISABLED, default=False): vol.Coerce(bool),
         vol.Optional(CONF_AUTO_MODE_DISABLED, default=False): vol.Coerce(bool),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
-            [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
+            [
+                HVACMode.HEAT_COOL,
+                HVACMode.COOL,
+                HVACMode.HEAT,
+                HVACMode.AUTO,
+                HVACMode.OFF,
+            ]
         ),
         vol.Optional(CONF_PRECISION): vol.In(
             [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]

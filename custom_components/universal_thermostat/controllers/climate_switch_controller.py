@@ -152,10 +152,11 @@ class ClimateSwitchController(SwitchController):
             reason,
         )
 
-        await self._async_set_temperature(
-            target_temp=self._thermostat.get_ctrl_target_temperature(self.mode),
-            reason=reason,
-        )
+        if self._temp_delta is not None:
+            await self._async_set_temperature(
+                target_temp=self._thermostat.get_ctrl_target_temperature(self.mode),
+                reason=reason,
+            )
 
         if (self._mode == HVACMode.COOL and not self._inverted) or (
             self._mode == HVACMode.HEAT and self._inverted
@@ -235,10 +236,14 @@ class ClimateSwitchController(SwitchController):
             await self._async_set_temperature(target_temp=target_temp, reason=reason)
 
     async def _async_set_temperature(self, target_temp: float, reason):
+        temp_delta = self._temp_delta
+        if temp_delta is None:
+            return
+
         if self.mode == HVACMode.COOL:
-            target_temp -= self._temp_delta
+            target_temp -= temp_delta
         else:
-            target_temp += self._temp_delta
+            target_temp += temp_delta
 
         if None not in (self._target_entity_min_temp, self._target_entity_max_temp):
             target_temp = min(

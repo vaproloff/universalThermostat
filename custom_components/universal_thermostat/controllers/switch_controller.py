@@ -186,7 +186,7 @@ class SwitchController(AbstractController):
     ):
         # If the `force` argument is True, we
         # ignore `min_cycle_duration`.
-        if not force and reason == REASON_KEEP_ALIVE and self._min_cycle_duration:
+        if not force and self._min_cycle_duration:
             if self._is_on:
                 current_state = STATE_ON
             else:

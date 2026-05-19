@@ -490,7 +490,7 @@ class PresetController:
 
             return hvac_mode
 
-        if self._saved_hvac_mode:
+        if self._saved_hvac_mode is not None:
             return self._preset.get_hvac_mode(self._saved_hvac_mode)
 
         return self._preset.get_hvac_mode(hvac_mode)
@@ -503,7 +503,7 @@ class PresetController:
 
             return target_temp
 
-        if self._saved_target_temp:
+        if self._saved_target_temp is not None:
             return self._preset.get_target_temp(hvac_mode, self._saved_target_temp)
 
         return self._preset.get_target_temp(hvac_mode, target_temp)
@@ -516,7 +516,7 @@ class PresetController:
 
             return target_temp_low
 
-        if self._saved_target_temp_low:
+        if self._saved_target_temp_low is not None:
             return self._preset.get_target_temp_low(self._saved_target_temp_low)
 
         return self._preset.get_target_temp_low(target_temp_low)
@@ -529,7 +529,7 @@ class PresetController:
 
             return target_temp_high
 
-        if self._saved_target_temp_high:
+        if self._saved_target_temp_high is not None:
             return self._preset.get_target_temp_high(self._saved_target_temp_high)
 
         return self._preset.get_target_temp_high(target_temp_high)

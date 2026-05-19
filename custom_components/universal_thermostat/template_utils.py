@@ -16,7 +16,7 @@ def render_float(
 ) -> float | None:
     """Render template-like value to float or return default."""
     if value is None:
-        return float(default)
+        return float(default) if default is not None else None
 
     if isinstance(value, (int, float)):
         return float(value)
