@@ -910,8 +910,11 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             vol.Optional(
                 CONF_KEEP_ALIVE,
                 default=self._cur_controller.get(CONF_KEEP_ALIVE, None),
-            ): selector.DurationSelector(
-                selector.DurationSelectorConfig(allow_negative=False)
+            ): vol.Any(
+                None,
+                selector.DurationSelector(
+                    selector.DurationSelectorConfig(allow_negative=False)
+                ),
             ),
             **self._clear_flag_schema(self._cur_controller, CONF_KEEP_ALIVE),
         }
@@ -941,14 +944,14 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
 
     def _pid_limits_schema(self) -> dict:
         return {
-            vol.Optional(
-                CONF_PID_MIN, default=self._cur_controller.get(CONF_PID_MIN, None)
+            self._optional_with_current_default(
+                self._cur_controller, CONF_PID_MIN
             ): vol.Any(
                 None, selector.NumberSelector(selector.NumberSelectorConfig(step=1.0))
             ),
             **self._clear_flag_schema(self._cur_controller, CONF_PID_MIN),
-            vol.Optional(
-                CONF_PID_MAX, default=self._cur_controller.get(CONF_PID_MAX, None)
+            self._optional_with_current_default(
+                self._cur_controller, CONF_PID_MAX
             ): vol.Any(
                 None, selector.NumberSelector(selector.NumberSelectorConfig(step=1.0))
             ),
@@ -1016,9 +1019,8 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0, max=20, step=0.1)
             ),
-            vol.Optional(
-                CONF_CLIMATE_TEMP_DELTA,
-                default=self._cur_controller.get(CONF_CLIMATE_TEMP_DELTA, None),
+            self._optional_with_current_default(
+                self._cur_controller, CONF_CLIMATE_TEMP_DELTA
             ): vol.Any(
                 None,
                 selector.NumberSelector(
@@ -1028,8 +1030,11 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             **self._clear_flag_schema(self._cur_controller, CONF_CLIMATE_TEMP_DELTA),
             vol.Optional(
                 CONF_MIN_DUR, default=self._cur_controller.get(CONF_MIN_DUR, None)
-            ): selector.DurationSelector(
-                selector.DurationSelectorConfig(allow_negative=False)
+            ): vol.Any(
+                None,
+                selector.DurationSelector(
+                    selector.DurationSelectorConfig(allow_negative=False)
+                ),
             ),
             **self._clear_flag_schema(self._cur_controller, CONF_MIN_DUR),
         }
@@ -1117,11 +1122,9 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
 
     def _build_target_temps_preset_schema(self) -> dict:
         return {
-            vol.Optional(
+            self._optional_with_current_default(
+                self._draft[CONF_PRESETS][self._cur_preset_name],
                 CONF_PRESET_TARGET_TEMP,
-                default=self._draft[CONF_PRESETS][self._cur_preset_name].get(
-                    CONF_PRESET_TARGET_TEMP, None
-                ),
             ): vol.Any(
                 None,
                 selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
@@ -1130,11 +1133,9 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 self._draft[CONF_PRESETS][self._cur_preset_name],
                 CONF_PRESET_TARGET_TEMP,
             ),
-            vol.Optional(
+            self._optional_with_current_default(
+                self._draft[CONF_PRESETS][self._cur_preset_name],
                 CONF_PRESET_HEAT_TARGET_TEMP,
-                default=self._draft[CONF_PRESETS][self._cur_preset_name].get(
-                    CONF_PRESET_HEAT_TARGET_TEMP, None
-                ),
             ): vol.Any(
                 None,
                 selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
@@ -1143,11 +1144,9 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 self._draft[CONF_PRESETS][self._cur_preset_name],
                 CONF_PRESET_HEAT_TARGET_TEMP,
             ),
-            vol.Optional(
+            self._optional_with_current_default(
+                self._draft[CONF_PRESETS][self._cur_preset_name],
                 CONF_PRESET_COOL_TARGET_TEMP,
-                default=self._draft[CONF_PRESETS][self._cur_preset_name].get(
-                    CONF_PRESET_COOL_TARGET_TEMP, None
-                ),
             ): vol.Any(
                 None,
                 selector.NumberSelector(selector.NumberSelectorConfig(step=0.1)),
@@ -1201,3 +1200,10 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         if not self._draft["presets"]:
             return "—"
         return "\n".join(f"- {name}" for name in self._draft["presets"])
+
+    def _optional_with_current_default(self, source: dict[str, Any], key: str) -> Any:
+        """Return optional schema key, omitting None defaults for UI rendering."""
+        value = source.get(key)
+        if value is None:
+            return vol.Optional(key)
+        return vol.Optional(key, default=value)
