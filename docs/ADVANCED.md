@@ -468,7 +468,7 @@ presets:
 #### Config options
 
 * `heat_delta` _(Required)_ - heating target temperature delta, signed float, can be a template
-* `cool_delta` _(Required)_ - heating target temperature delta, signed float, can be a template
+* `cool_delta` _(Required)_ - cooling target temperature delta, signed float, can be a template
 
 #### Behavior
 

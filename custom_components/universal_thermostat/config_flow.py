@@ -442,7 +442,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 }
             ),
             description_placeholders={
-                "current_entity_id": self._cur_controller[CONF_ENTITY_ID],
+                "current_entity_id": f"**{self._cur_controller[CONF_ENTITY_ID]}**",
                 "controller_type": self._cur_ctrl_type,
             },
         )
@@ -1193,13 +1193,13 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
         """Format entity list for descriptions."""
         if not items:
             return "—"
-        return "\n".join(f"- {item['entity_id']}" for item in items)
+        return "\n".join(f"- **{item['entity_id']}**" for item in items)
 
     def _format_presets(self) -> str:
         """Format presets list for descriptions."""
         if not self._draft["presets"]:
             return "—"
-        return "\n".join(f"- {name}" for name in self._draft["presets"])
+        return "\n".join(f"- **{name}**" for name in self._draft["presets"])
 
     def _optional_with_current_default(self, source: dict[str, Any], key: str) -> Any:
         """Return optional schema key, omitting None defaults for UI rendering."""
