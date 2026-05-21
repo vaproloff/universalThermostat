@@ -9,6 +9,7 @@ import math
 from typing import Any
 
 from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -492,15 +493,28 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
                 )
             )
 
+    def _get_restored_controller_attrs(
+        self, old_state: State | None, controller: AbstractController
+    ) -> Mapping[str, Any]:
+        """Return controller attrs from current or legacy storage keys."""
+        if old_state is None:
+            return {}
+
+        attrs = old_state.attributes.get(controller.get_unique_id())
+        if attrs is not None:
+            return attrs
+
+        legacy_attrs = old_state.attributes.get(controller.get_legacy_unique_id(), {})
+        legacy_mode = legacy_attrs.get(ATTR_HVAC_MODE)
+        if legacy_mode is not None and legacy_mode != controller.mode:
+            return {}
+
+        return legacy_attrs
+
     async def _setup_climate_controllers(self, old_state: State | None) -> None:
         """Initialize climate controllers and subscribe to their entities."""
         for controller in self._controllers:
-            attrs = (
-                old_state.attributes.get(controller.get_unique_id(), {})
-                if old_state
-                else {}
-            )
-
+            attrs = self._get_restored_controller_attrs(old_state, controller)
             await controller.async_added_to_hass(self.hass, attrs)
 
             target_entity_ids = controller.get_target_entity_ids()

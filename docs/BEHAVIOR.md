@@ -574,7 +574,8 @@ skips the affected value, depending on the field.
 Universal Thermostat exposes extra attributes that can help with debugging:
 
 - rendered `auto_cool_delta` and `auto_heat_delta`
-- per-controller attributes under keys like `ctrl_<entity_object_id>`
+- per-controller attributes under keys like `heater_<entity_object_id>` and
+  `cooler_<entity_object_id>`
 - last processed control HVAC mode
 - last active HVAC mode
 - saved preset state while a preset is active

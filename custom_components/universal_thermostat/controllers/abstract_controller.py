@@ -152,6 +152,13 @@ class AbstractController(abc.ABC):
 
     def get_unique_id(self):
         """Get unique ID, for attrs storage."""
+        object_id = split_entity_id(self._target_entity_id)[1]
+        if self._mode == HVACMode.HEAT:
+            return f"heater_{object_id}"
+        return f"cooler_{object_id}"
+
+    def get_legacy_unique_id(self):
+        """Get legacy unique ID, for restoring old attrs storage."""
         return "ctrl_" + split_entity_id(self._target_entity_id)[1]
 
     def get_target_entity_ids(self) -> list[str]:
