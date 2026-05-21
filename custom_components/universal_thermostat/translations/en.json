@@ -3,24 +3,24 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add new Universal Thermostat",
-        "description": "Please set base settings",
+        "title": "Add Universal Thermostat",
+        "description": "Configure the basic settings.",
         "data": {
-          "name": "Universal thermostat name",
-          "target_sensor": "Target temperature sensor"
+          "name": "Name",
+          "target_sensor": "Temperature sensor"
         }
       },
       "options_notice": {
-        "title": "Finish setup in options",
-        "description": "The thermostat \"{name}\" with {sensor} configured.\n\nPlease open the integration options after creation and add at least one controller. You can also configure other settings, HVAC modes, windows, and presets there."
+        "title": "Finish setup in Options",
+        "description": "The thermostat \"{name}\" has been configured with sensor **{sensor}**.\n\nOpen the integration options after creation, add at least one **heater** or **cooler**, review the thermostat settings, then save."
       }
     },
     "error": {
-      "invalid_temp_range": "Invalid temperature range: Minimum has to be lower than Maximum",
-      "no_controllers": "At least one entity must be added",
-      "preset_exists": "Preset with such name already exists",
-      "preset_target_required": "At least one target temp required",
-      "already_configured": "Device with this name and temperature sensor already configured",
+      "invalid_temp_range": "Invalid temperature range: the **minimum** must be lower than the **maximum**.",
+      "no_controllers": "Add at least one **heater** or **cooler**.",
+      "preset_exists": "This preset already exists.",
+      "preset_target_required": "At least one **target temperature** is required.",
+      "already_configured": "A thermostat with this **name** and **temperature sensor** is already configured.",
       "unknown": "Unexpected error"
     }
   },
@@ -28,9 +28,9 @@
     "step": {
       "init": {
         "title": "Universal Thermostat overview",
-        "description": "Name: **{name}**\nSensor: **{sensor}**\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets:\n{presets}",
+        "description": "Name: **{name}**\nSensor: **{sensor}**\n\nAdd at least one **heater** or **cooler** before saving. **Windows** and **presets** are optional.\n\nHeaters:\n{heaters}\n\nCoolers:\n{coolers}\n\nWindows:\n{windows}\n\nPresets:\n{presets}",
         "data": {
-          "action": "What to do next?"
+          "action": "Next step"
         }
       },
       "thermostat_settings": {
@@ -40,186 +40,179 @@
           "max_temp": "Maximum target temperature",
           "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
           "auto_mode_disabled": "Disable `auto` HVAC mode",
-          "auto_cool_delta": "Auto mode cool delta",
-          "auto_heat_delta": "Auto mode heat delta"
+          "auto_cool_delta": "`auto` mode cooling delta",
+          "auto_heat_delta": "`auto` mode heating delta"
         },
         "data_description": {
-          "auto_cool_delta": "Target temperature delta for Coolers in `auto` mode. Available only if `auto` HVAC mode is not disabled",
-          "auto_heat_delta": "Target temperature delta for Heaters in `auto` mode. Available only if `auto` HVAC mode is not disabled",
-          "heat_cool_disabled": "`heat/cool` mode will not be available if disabled",
-          "auto_mode_disabled": "`auto` mode will not be available if disabled"
+          "min_temp": "Lowest target temperature the thermostat will allow to set",
+          "max_temp": "Highest target temperature the thermostat will allow to set",
+          "auto_cool_delta": "In `auto` mode, coolers use the thermostat target plus this delta. Example: target 22 and delta 1.0 gives a cooling target of 23",
+          "auto_heat_delta": "In `auto` mode, heaters use the thermostat target minus this delta. Example: target 22 and delta 1.0 gives a heating target of 21",
+          "heat_cool_disabled": "Hide the `heat/cool` HVAC mode",
+          "auto_mode_disabled": "Hide the `auto` HVAC mode"
         }
       },
       "controllers_menu": {
         "title": "Controllers",
-        "description": "You can add multiple **heaters** and/or **coolers** with individual settings for each one\nConfigured **heaters*:\n{heaters}\n\nConfigured **coolers**:\n{coolers}",
+        "description": "A controller is a **heater** or **cooler** entity controlled by this thermostat. You can add multiple heaters and/or coolers, each with its own settings.\n\nConfigured **heaters**:\n{heaters}\n\nConfigured **coolers**:\n{coolers}",
         "data": {
-          "action": "What to do next?"
+          "action": "Next step"
         }
       },
       "controller_add": {
-        "title": "Adding heater/cooler",
-        "description": "You can also add the same entity as a cooler and a heater simultaneously (e.g. air conditioners or other devices with cooling and heating functions)",
+        "title": "Add heater or cooler",
+        "description": "Choose the entity to control and whether it should heat or cool. The same physical device can be added as a **heater** and as a **cooler**, for example an A/C unit with both modes.",
         "data": {
-          "entity_id": "Pick entity to add:",
-          "controller_type": "Choose controller type:"
+          "entity_id": "Entity to control",
+          "controller_type": "Controller type"
         }
       },
       "controller_mode": {
-        "title": "Adding {controller_type}",
-        "description": "Choose control type of entity\n{current_entity_id}",
+        "title": "Add {controller_type}",
+        "description": "Choose how Universal Thermostat should control this entity.\n\n{current_entity_id}",
         "data": {
-          "controller_mode": "Control type:"
+          "controller_mode": "Control mode"
         }
       },
       "controller_config": {
         "title": "Configure {controller_type}",
-        "description": "Set options for your entity\n**{current_entity_id}** ({controller_config_type})",
+        "description": "Set options for **{current_entity_id}**.\n\nControl mode: `{controller_config_type}`",
         "data": {
-          "inverted": "Inverted logic",
+          "inverted": "Invert controller logic",
           "ignore_windows": "Ignore windows",
-          "keep_alive": "Keep alive interval",
-          "clear_keep_alive": "Clear keep alive interval",
+          "keep_alive": "Keep-alive interval",
+          "clear_keep_alive": "Clear keep-alive interval",
           "cold_tolerance": "Cold tolerance",
           "hot_tolerance": "Hot tolerance",
           "target_temp_delta": "Target temperature delta",
           "clear_target_temp_delta": "Clear target temperature delta",
           "min_cycle_duration": "Minimum cycle duration",
           "clear_min_cycle_duration": "Clear minimum cycle duration",
-          "kp": "PID proportional coefficient",
-          "ki": "PID integral coefficient",
-          "kd": "PID derivative coefficient",
-          "pid_sample_period": "PID constant sample time period",
-          "clear_pid_sample_period": "Clear PID constant sample time period",
+          "kp": "PID proportional gain (Kp)",
+          "ki": "PID integral gain (Ki)",
+          "kd": "PID derivative gain (Kd)",
+          "pid_sample_period": "PID sample period",
+          "clear_pid_sample_period": "Clear PID sample period",
           "pwm_period": "PWM period",
-          "min": "Minimum PID value",
-          "clear_min": "Clear minimum PID value",
-          "max": "Maximum PID value",
-          "clear_max": "Clear maximum PID value",
-          "switch_entity_id": "Switch entity to toggle",
-          "clear_switch_entity_id": "Clear switch entity to toggle",
-          "switch_inverted": "Inverted logic for switch entity"
+          "min": "Minimum PID output",
+          "clear_min": "Clear minimum PID output",
+          "max": "Maximum PID output",
+          "clear_max": "Clear maximum PID output",
+          "switch_entity_id": "Optional switch entity",
+          "clear_switch_entity_id": "Clear switch entity",
+          "switch_inverted": "Invert switch logic"
         },
         "data_description": {
-          "ignore_windows": "Ignore opening/closing windows if those configured",
-          "keep_alive": "Use with heaters, coolers,  A/C units that shut off if they don’t receive a signal from their remote for a while.",
-          "cold_tolerance": "Negative difference from the target temperature at which heater will be turned on (cooler will be turned off)",
-          "hot_tolerance": "Positive difference from the target temperature at which heater will be turned off (cooler will be turned on)",
-          "target_temp_delta": "Delta between Universal Thermostat and target climate entity set points",
-          "min_cycle_duration": "Use to protect from often on/off cycling",
-          "pwm_period": "Switch will be turned on and turned off according internal PID output once in this period.",
-          "clear_keep_alive": "Use this switch to reset/delete keep alive interval field value",
-          "clear_target_temp_delta": "Use this switch to reset/delete target temperature delta field value",
-          "clear_min_cycle_duration": "Use this switch to reset/delete minimum cycle duration field value",
-          "clear_pid_sample_period": "Use this switch to reset/delete PID constant sample time period field value",
-          "clear_min": "Use this switch to reset/delete minimum PID field value",
-          "clear_max": "Use this switch to reset/delete maximum PID field value",
-          "clear_switch_entity_id": "Use this switch to reset/delete switch entity field"
+          "inverted": "Use when the entity's `on` and `off` behavior is reversed. For a switch, Universal Thermostat will call `turn_off` to start and `turn_on` to stop.",
+          "ignore_windows": "Keep this controller running even when a configured window is open.",
+          "keep_alive": "Repeat the current command on this interval. Useful for devices that stop unless they periodically receive a command.",
+          "cold_tolerance": "For heaters, how far below the target temperature the room must fall before heating starts. For coolers, how far below the target temperature the room must fall before cooling stops. Example: target 21.0 and tolerance 0.3 starts heating at 20.7.",
+          "hot_tolerance": "For coolers, how far above the target temperature the room must rise before cooling starts. For heaters, how far above the target temperature the room must rise before heating stops. Example: target 24.0 and tolerance 0.3 starts cooling at 24.3.",
+          "target_temp_delta": "Heating sends target plus this delta; cooling sends target minus this delta. Example: target 21 and delta 1 sends 22 for heating or 20 for cooling.",
+          "min_cycle_duration": "Minimum time the controller must stay in its current state before Universal Thermostat changes it again. Helps prevent rapid on/off cycling.",
+          "kp": "How strongly PID reacts to the current temperature error. Increase for a stronger immediate response.",
+          "ki": "How strongly PID reacts to accumulated error over time. Increase carefully if the temperature settles too far from the target.",
+          "kd": "How strongly PID reacts to fast temperature changes. Increase carefully to reduce overshoot.",
+          "pid_sample_period": "How often PID recalculates the output. Leave empty to recalculate on every relevant update.",
+          "pwm_period": "Length of one PWM cycle. A PID output of 25% keeps the switch on for 25% of each period and off for the rest.",
+          "min": "Lower limit for PID output. For number entities, this is clamped to the entity's minimum value.",
+          "max": "Upper limit for PID output. For number entities, this is clamped to the entity's maximum value.",
+          "switch_entity_id": "Optional switch used with a number PID controller. Universal Thermostat turns it on while the number output is active and off when control stops.",
+          "switch_inverted": "Use when the optional switch entity has reversed logic.",
+          "clear_keep_alive": "Use to remove the saved keep-alive interval.",
+          "clear_target_temp_delta": "Use to remove the saved target temperature delta.",
+          "clear_min_cycle_duration": "Use to remove the saved minimum cycle duration.",
+          "clear_pid_sample_period": "Use to remove the saved PID sample period.",
+          "clear_min": "Use to remove the saved minimum PID output.",
+          "clear_max": "Use to remove the saved maximum PID output.",
+          "clear_switch_entity_id": "Use to remove the saved switch entity."
         }
       },
       "controller_edit": {
-        "title": "Edit heater/cooler",
-        "description": "Choose controller you want to edit",
+        "title": "Edit heater or cooler",
+        "description": "Choose the controller to edit.",
         "data": {
-          "controller": "Pick one of the following:"
+          "controller": "Controller"
         }
       },
       "controller_remove": {
-        "title": "Remove heater/cooler",
-        "description": "Choose controller you want to remove from Thermostat",
+        "title": "Remove heater or cooler",
+        "description": "Choose the controller to remove from this thermostat.",
         "data": {
-          "controller": "Pick one of the following:"
+          "controller": "Controller"
         }
       },
       "windows_menu": {
         "title": "Windows",
-        "description": "You can add any **binary device** (like door/window/presence binary sensors or any other similar entities) to prevent/pause heating/cooling when its state is `on` (or `off` for inverted window, e.g. presence).\nYou \n\nConfigured windows:\n{windows}",
+        "description": "Add binary entities that should pause heating and cooling when they are active, such as window, door, or presence sensors etc. By default, `on` means open or active; enable inverted logic when `off` should pause the thermostat.\n\nConfigured **windows**:\n{windows}",
         "data": {
-          "action": "What to do next?"
+          "action": "Next step"
         }
       },
       "window_add": {
-        "title": "Adding window",
-        "description": "Choose **binary entity** as a **window** and its settings",
+        "title": "Add window",
+        "description": "Choose and set up a binary entity.",
         "data": {
-          "entity_id": "Pick binary entity:",
-          "inverted": "Inverted logic",
-          "timeout": "Timeout"
+          "entity_id": "Entity",
+          "inverted": "Invert logic",
+          "timeout": "Delay"
         },
         "data_description": {
-          "inverted": "If inverted - controllers will stop when **window** is `off`. Use with presence sensors or any entities with similar inverted logic",
-          "timeout": "Time period to wait until stop/start controller after **window** opening/closing (`on`/`off`)"
+          "inverted": "Use when `off` should mean open or active, for example some presence sensors.",
+          "timeout": "Wait this long after the **window** changes before stopping or restarting controllers."
         }
       },
       "window_remove": {
         "title": "Remove window",
-        "description": "Choose **window** you want to remove from Thermostat",
+        "description": "Choose entity to remove.",
         "data": {
-          "window": "Pick entity:"
+          "window": "Window entity"
         }
       },
       "window_edit": {
         "title": "Edit window",
-        "description": "Choose **window** you want to edit",
+        "description": "Choose entity to edit.",
         "data": {
-          "window": "Pick entity:"
+          "window": "Window entity"
         }
       },
       "window_config": {
         "title": "Edit window",
-        "description": "Update **window** settings",
+        "description": "Update **window** settings.",
         "data": {
-          "entity_id": "Your entity:",
-          "inverted": "Inverted logic",
-          "timeout": "Timeout",
-          "clear_timeout": "Clear timeout"
+          "entity_id": "**Window** entity",
+          "inverted": "Invert **window** logic",
+          "timeout": "Delay",
+          "clear_timeout": "Clear delay"
         },
         "data_description": {
-          "inverted": "If inverted - controllers will stop when **window** is `off`. Use with presence sensors or any entities with similar inverted logic",
-          "timeout": "Time period to wait until stop/start controller after **window** opening/closing (`on`/`off`)"
+          "inverted": "Use when `off` should mean open or active, for example some presence sensors.",
+          "timeout": "Wait this long after the **window** changes before stopping or restarting controllers.",
+          "clear_timeout": "Enable to remove the saved delay."
         }
       },
       "presets_menu": {
         "title": "Presets",
-        "description": "**Presets** can adjust target temperatures, change HVAC mode, or tune auto-mode heating/cooling targets.\n\nConfigured **presets**:\n{presets}",
+        "description": "**Presets** change thermostat targets when you select a preset mode. They can shift the current target, set separate heating/cooling deltas, or set fixed target temperatures.\n\nConfigured **presets**:\n{presets}",
         "data": {
-          "action": "What to do next?"
+          "action": "Next step"
         }
       },
       "preset_add": {
-        "title": "Adding preset",
-        "description": "Add name and type for new **preset**\n\n**Single temperature delta** - changes thermostat target temperature (or temperatures in `heat/cool` mode)\n\n**Heating/cooling temperature deltas** - changes thermostat heating and cooling target temperatures\n\n**Target temperatures** - sets particular thermostat target temperatures",
+        "title": "Add preset",
+        "description": "Choose a **preset** and how it should change temperatures.\n\n**Single temperature delta** shifts the current target temperature. In `heat/cool` mode it shifts both low and high targets.\n\n**Heating/cooling temperature deltas** shift heating and cooling targets separately. In `auto` mode, they adjust the automatic heating/cooling targets.\n\n**Target temperatures** set fixed target temperatures.",
         "data": {
-          "preset_name": "Choose **preset** name:",
-          "preset_type": "Choose **preset** type:"
+          "preset_name": "**Preset**",
+          "preset_type": "**Preset** type"
         }
       },
-      "preset_config_temp_delta": {
+      "preset_config": {
         "title": "Configure preset",
-        "description": "Configuring single temperature delta preset: **{current_preset}**",
+        "description": "Configure preset **{current_preset}**.\n\nOnly the fields for the selected preset type are shown.",
         "data": {
-          "temp_delta": "Target temperature delta"
-        },
-        "data_description": {
-          "temp_delta": "Changes thermostat target temperature(s): adds positive number/subtract negative number"
-        }
-      },
-      "preset_config_heat_cool_delta": {
-        "title": "Configure preset",
-        "description": "Configuring heating/cooling temperature deltas preset: **{current_preset}**",
-        "data": {
+          "temp_delta": "Target temperature delta",
           "heat_delta": "Heating target temperature delta",
-          "cool_delta": "Cooling target temperature delta"
-        },
-        "data_description": {
-          "heat_delta": "Changes thermostat target temperature in `heat` mode, or low target temperature in `heat/cool` mode, or adds to `auto_heat_delta` in `auto` mode: adds positive number/subtract negative number",
-          "cool_delta": "Changes thermostat target temperature in `cool` mode, or high target temperature in `heat/cool` mode, or adds to `auto_cool_delta` in `auto` mode: adds positive number/subtract negative number"
-        }
-      },
-      "preset_config_target_temp": {
-        "title": "Configure preset",
-        "description": "Configuring target temperatures preset: **{current_preset}**\n\nAt least one target must be configured",
-        "data": {
+          "cool_delta": "Cooling target temperature delta",
           "target_temp": "Single target temperature",
           "clear_target_temp": "Clear single target temperature",
           "heat_target_temp": "Heating target temperature",
@@ -228,82 +221,85 @@
           "clear_cool_target_temp": "Clear cooling target temperature"
         },
         "data_description": {
-          "target_temp": "Changes target temperature to a fixed value if preset's Cooling/Heating target temperatures not configured",
-          "clear_target_temp": "Clear single target temperature",
-          "heat_target_temp": "Changes target temperature to a fixed value for `heat` mode, low_target for `heat/cool` mode and creates invisible target temp for heaters in `auto` mode",
-          "clear_heat_target_temp": "Clear heating target temperature",
-          "cool_target_temp": "Changes target temperature to a fixed value for `cool` mode, high_target for `heat/cool` mode and creates invisible target temp for coolers in `auto` mode",
-          "clear_cool_target_temp": "Clear cooling target temperature"
+          "temp_delta": "Adds this value to the thermostat target temperature. Example: target 21 and delta -2 changes the preset target to 19.",
+          "heat_delta": "Adds this value to the heating target. In `heat/cool` mode it changes the low target. In `auto` mode it adjusts the automatic heating target.",
+          "cool_delta": "Adds this value to the cooling target. In `heat/cool` mode it changes the high target. In `auto` mode it adjusts the automatic cooling target.",
+          "target_temp": "Sets one fixed target temperature when heating/cooling-specific targets are not configured.",
+          "clear_target_temp": "Enable to remove the saved single target temperature.",
+          "heat_target_temp": "Sets a fixed heating target. In `heat/cool` mode this is the low target. In `auto` mode it is used only when a cooling target is also set.",
+          "clear_heat_target_temp": "Enable to remove the saved heating target temperature.",
+          "cool_target_temp": "Sets a fixed cooling target. In `heat/cool` mode this is the high target. In `auto` mode it is used only when a heating target is also set.",
+          "clear_cool_target_temp": "Enable to remove the saved cooling target temperature."
         }
       },
       "preset_edit": {
         "title": "Edit preset",
-        "description": "Choose **preset** you want to edit",
+        "description": "Choose the **preset** to edit.",
         "data": {
-          "preset": "Pick your preset:"
+          "preset_name": "Preset"
         }
       },
       "preset_remove": {
         "title": "Remove preset",
-        "description": "Choose **preset** you want to remove from Thermostat",
+        "description": "Choose the **preset** to remove.",
         "data": {
-          "preset": "Pick your preset:"
+          "preset": "Preset"
         }
       }
     },
     "error": {
-      "invalid_temp_range": "Invalid temperature range: Minimum has to be lower than Maximum",
-      "no_controllers": "At least one entity must be added",
-      "preset_exists": "Preset with such name already exists",
-      "preset_target_required": "At least one target temp required",
+      "invalid_temp_range": "Invalid temperature range: the minimum must be lower than the maximum.",
+      "no_controllers": "Add at least one **heater** or **cooler**.",
+      "preset_exists": "A preset with this name already exists.",
+      "preset_target_required": "At least one target temperature is required.",
       "unknown": "Unexpected error"
     }
   },
   "selector": {
     "options_action_selector": {
       "options": {
-        "thermostat_settings": "Thermostat general settings",
-        "controllers_menu": "Set up coolers/heaters",
-        "windows_menu": "Set up Windows",
-        "presets_menu": "Set up Presets",
-        "save": "Save/Done"
+        "thermostat_settings": "**Thermostat** settings",
+        "controllers_menu": "Set up **heaters** and **coolers**",
+        "windows_menu": "Set up **windows**",
+        "presets_menu": "Set up **presets**",
+        "save": "Save"
       }
     },
     "controllers_menu_selector": {
       "options": {
-        "add": "Add new heater or cooler",
-        "edit": "Edit existing heater or cooler",
-        "remove": "Remove existing heater or cooler",
+        "add": "Add new **heater** or **cooler**",
+        "edit": "Edit existing **heater** or **cooler**",
+        "remove": "Remove existing **heater** or **cooler**",
         "done": "Back to main menu"
       }
     },
     "controller_add_selector": {
       "options": {
-        "heater": "Heating device entity",
-        "cooler": "Cooling device entity"
+        "heater": "Heater",
+        "cooler": "Cooler"
       }
     },
     "controller_mode_selector": {
       "options": {
-        "switch": "Toggleable switch",
+        "switch": "Simple switch",
         "pwm_switch": "PWM PID switch",
-        "climate_switch": "Toggleable thermostat with optional temperature delta",
-        "climate_pid": "PID thermostat"
+        "climate_switch": "Climate entity",
+        "climate_pid": "PID climate entity"
       }
     },
     "windows_menu_selector": {
       "options": {
-        "add": "Add new window",
-        "edit": "Edit existing window",
-        "remove": "Remove existing window",
+        "add": "Add new **window**",
+        "edit": "Edit existing **window**",
+        "remove": "Remove existing **window**",
         "done": "Back to main menu"
       }
     },
     "presets_menu_selector": {
       "options": {
-        "add": "Add new preset",
-        "edit": "Edit existing preset",
-        "remove": "Remove existing preset",
+        "add": "Add new **preset**",
+        "edit": "Edit existing **preset**",
+        "remove": "Remove existing **preset**",
         "done": "Back to main menu"
       }
     },

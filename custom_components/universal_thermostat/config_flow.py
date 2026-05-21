@@ -852,7 +852,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                         selector.SelectSelectorConfig(
                             options=list(self._draft[CONF_PRESETS].keys()),
                             mode=selector.SelectSelectorMode.LIST,
-                            translation_key="preset_type_selector",
+                            translation_key="preset_name_selector",
                         )
                     )
                 }
