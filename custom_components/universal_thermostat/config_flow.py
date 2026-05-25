@@ -187,7 +187,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             CONF_AUTO_HEAT_DELTA: config_entry.options.get(
                 CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
             ),
-            CONF_TEMP_STEP: config_entry.options.get(CONF_TEMP_STEP, PRECISION_HALVES),
+            CONF_TEMP_STEP: config_entry.options.get(CONF_TEMP_STEP, None),
             CONF_WINDOWS: [
                 dict(window) for window in config_entry.options.get(CONF_WINDOWS, [])
             ],
@@ -239,7 +239,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required("action"): selector.SelectSelector(
+                    vol.Required("action", default="save"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[
                                 "thermostat_settings",
@@ -292,9 +292,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 self._draft[CONF_AUTO_HEAT_DELTA] = user_input.get(
                     CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
                 )
-                self._draft[CONF_TEMP_STEP] = user_input.get(
-                    CONF_TEMP_STEP, PRECISION_HALVES
-                )
+                self._draft[CONF_TEMP_STEP] = user_input.get(CONF_TEMP_STEP)
 
                 return await self.async_step_init()
 
@@ -335,16 +333,18 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_TEMP_STEP,
                         default=self._draft[CONF_TEMP_STEP],
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[
-                                {"value": str(PRECISION_TENTHS), "label": "0.1"},
-                                {"value": str(PRECISION_HALVES), "label": "0.5"},
-                                {"value": str(PRECISION_WHOLE), "label": "1"},
-                            ],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="temp_step_selector",
-                        )
+                    ): vol.Any(
+                        None,
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    {"value": str(PRECISION_TENTHS), "label": "0.1"},
+                                    {"value": str(PRECISION_HALVES), "label": "0.5"},
+                                    {"value": str(PRECISION_WHOLE), "label": "1"},
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
                     ),
                 }
             ),
@@ -578,7 +578,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             step_id="windows_menu",
             data_schema=vol.Schema(
                 {
-                    vol.Required("action"): selector.SelectSelector(
+                    vol.Required("action", default="done"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=options,
                             mode=selector.SelectSelectorMode.LIST,
@@ -746,7 +746,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             step_id="presets_menu",
             data_schema=vol.Schema(
                 {
-                    vol.Required("action"): selector.SelectSelector(
+                    vol.Required("action", default="done"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=options,
                             mode=selector.SelectSelectorMode.LIST,
