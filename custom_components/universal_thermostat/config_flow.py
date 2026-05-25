@@ -21,7 +21,13 @@ from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
+from homeassistant.const import (
+    CONF_ENTITY_ID,
+    CONF_NAME,
+    PRECISION_HALVES,
+    PRECISION_TENTHS,
+    PRECISION_WHOLE,
+)
 from homeassistant.core import callback, split_entity_id
 from homeassistant.helpers import selector
 
@@ -61,6 +67,7 @@ from .const import (
     CONF_PRESETS,
     CONF_PWM_SWITCH_PERIOD,
     CONF_SENSOR,
+    CONF_TEMP_STEP,
     CONF_WINDOWS,
     CTRL_CFG_CLIMATE_PID,
     CTRL_CFG_CLIMATE_SWITCH,
@@ -180,6 +187,7 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
             CONF_AUTO_HEAT_DELTA: config_entry.options.get(
                 CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
             ),
+            CONF_TEMP_STEP: config_entry.options.get(CONF_TEMP_STEP, PRECISION_HALVES),
             CONF_WINDOWS: [
                 dict(window) for window in config_entry.options.get(CONF_WINDOWS, [])
             ],
@@ -284,6 +292,9 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 self._draft[CONF_AUTO_HEAT_DELTA] = user_input.get(
                     CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
                 )
+                self._draft[CONF_TEMP_STEP] = user_input.get(
+                    CONF_TEMP_STEP, PRECISION_HALVES
+                )
 
                 return await self.async_step_init()
 
@@ -320,6 +331,20 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                         default=self._draft[CONF_AUTO_HEAT_DELTA],
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=-50, max=50, step=0.1)
+                    ),
+                    vol.Optional(
+                        CONF_TEMP_STEP,
+                        default=self._draft[CONF_TEMP_STEP],
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                {"value": str(PRECISION_TENTHS), "label": "0.1"},
+                                {"value": str(PRECISION_HALVES), "label": "0.5"},
+                                {"value": str(PRECISION_WHOLE), "label": "1"},
+                            ],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="temp_step_selector",
+                        )
                     ),
                 }
             ),

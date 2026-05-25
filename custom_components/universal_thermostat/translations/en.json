@@ -41,7 +41,8 @@
           "heat_cool_disabled": "Disable `heat/cool` HVAC mode",
           "auto_mode_disabled": "Disable `auto` HVAC mode",
           "auto_cool_delta": "`auto` mode cooling delta",
-          "auto_heat_delta": "`auto` mode heating delta"
+          "auto_heat_delta": "`auto` mode heating delta",
+          "target_temp_step": "Target temperature step"
         },
         "data_description": {
           "min_temp": "Lowest target temperature the thermostat will allow to set",
@@ -258,18 +259,18 @@
   "selector": {
     "options_action_selector": {
       "options": {
-        "thermostat_settings": "**Thermostat** settings",
-        "controllers_menu": "Set up **heaters** and **coolers**",
-        "windows_menu": "Set up **windows**",
-        "presets_menu": "Set up **presets**",
+        "thermostat_settings": "Thermostat settings",
+        "controllers_menu": "Set up heaters and coolers",
+        "windows_menu": "Set up windows",
+        "presets_menu": "Set up presets",
         "save": "Save"
       }
     },
     "controllers_menu_selector": {
       "options": {
-        "add": "Add new **heater** or **cooler**",
-        "edit": "Edit existing **heater** or **cooler**",
-        "remove": "Remove existing **heater** or **cooler**",
+        "add": "Add new heater or cooler",
+        "edit": "Edit existing heater or cooler",
+        "remove": "Remove existing heater or cooler",
         "done": "Back to main menu"
       }
     },
@@ -289,17 +290,17 @@
     },
     "windows_menu_selector": {
       "options": {
-        "add": "Add new **window**",
-        "edit": "Edit existing **window**",
-        "remove": "Remove existing **window**",
+        "add": "Add new window",
+        "edit": "Edit existing window",
+        "remove": "Remove existing window",
         "done": "Back to main menu"
       }
     },
     "presets_menu_selector": {
       "options": {
-        "add": "Add new **preset**",
-        "edit": "Edit existing **preset**",
-        "remove": "Remove existing **preset**",
+        "add": "Add new preset",
+        "edit": "Edit existing preset",
+        "remove": "Remove existing preset",
         "done": "Back to main menu"
       }
     },
