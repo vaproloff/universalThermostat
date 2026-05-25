@@ -6,11 +6,14 @@ from datetime import timedelta
 import logging
 from typing import Any, final
 
+from custom_components.universal_thermostat.const import (
+    CONF_INVERTED,
+    REASON_KEEP_ALIVE,
+)
+
 from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
-
-from ..const import CONF_INVERTED, REASON_KEEP_ALIVE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,7 +87,7 @@ class AbstractController(abc.ABC):
         if mode not in [HVACMode.COOL, HVACMode.HEAT]:
             raise ValueError(f"{self.name}: unsupported mode: '{mode}'")
 
-    def set_thermostat(self, thermostat):
+    def set_thermostat(self, thermostat: Thermostat):
         """Set parent universal thermostat entity."""
         self._thermostat = thermostat
 
@@ -135,7 +138,7 @@ class AbstractController(abc.ABC):
         self._hass = hass
 
         if self._keep_alive:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s - %s: setting up keep_alive (%s)",
                 self._thermostat.entity_id,
                 self.name,
@@ -149,6 +152,13 @@ class AbstractController(abc.ABC):
 
     def get_unique_id(self):
         """Get unique ID, for attrs storage."""
+        object_id = split_entity_id(self._target_entity_id)[1]
+        if self._mode == HVACMode.HEAT:
+            return f"heater_{object_id}"
+        return f"cooler_{object_id}"
+
+    def get_legacy_unique_id(self):
+        """Get legacy unique ID, for restoring old attrs storage."""
         return "ctrl_" + split_entity_id(self._target_entity_id)[1]
 
     def get_target_entity_ids(self) -> list[str]:
@@ -229,7 +239,15 @@ class AbstractController(abc.ABC):
 
         if not self.__running:
             await self._async_ensure_not_running()
-        elif None not in (cur_temp, target_temp):
+        elif None in (cur_temp, target_temp):
+            _LOGGER.debug(
+                "%s - %s: skipping control, current: %s, target: %s",
+                self._thermostat.entity_id,
+                self.name,
+                cur_temp,
+                target_temp,
+            )
+        else:
             await self._async_control(
                 cur_temp,
                 target_temp,

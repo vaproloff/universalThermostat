@@ -1,11 +1,8 @@
 """PID Controller."""
 
-import logging
 import time
 
-from ..const import DEFAULT_PID_MAX, DEFAULT_PID_MIN
-
-_LOGGER = logging.getLogger(__name__)
+INTEGRAL_LIMITS = (-100, 100)
 
 
 class PIDController:
@@ -17,7 +14,7 @@ class PIDController:
         ki=0.0,
         kd=0.0,
         sample_time=None,
-        output_limits=(DEFAULT_PID_MIN, DEFAULT_PID_MAX),
+        output_limits=(0, 100),
     ) -> None:
         """Initialize the PID controller."""
         self._set_point = 0
@@ -66,7 +63,7 @@ class PIDController:
 
         # Calculate I
         self._i_term += self._ki * error * delta_time
-        self._i_term = self.clamp_value(self._i_term, self._output_limits)
+        self._i_term = self.clamp_value(self._i_term, INTEGRAL_LIMITS)
 
         # Calculate D
         self._d_term = 0

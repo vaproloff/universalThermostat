@@ -6,13 +6,7 @@ from datetime import timedelta
 import logging
 from typing import Any, final
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.template import RenderInfo, Template
-
-from ..const import (
+from custom_components.universal_thermostat.const import (
     CONF_PID_KD,
     CONF_PID_KI,
     CONF_PID_KP,
@@ -20,15 +14,43 @@ from ..const import (
     DEFAULT_PID_KD,
     DEFAULT_PID_KI,
     DEFAULT_PID_KP,
+    REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED,
     REASON_KEEP_ALIVE,
     REASON_PID_CONTROL,
+    REASON_PRESET_CHANGED,
+    REASON_TEMPLATE_ENTITY_CHANGED,
+    REASON_THERMOSTAT_FIRST_RUN,
+    REASON_THERMOSTAT_HVAC_MODE_CHANGED,
     REASON_THERMOSTAT_SENSOR_CHANGED,
     REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
+    REASON_WINDOW_ENTITY_CHANGED,
 )
-from . import AbstractController
+from custom_components.universal_thermostat.template_utils import (
+    get_template_entities,
+    render_float,
+)
+
+from homeassistant.components.climate import HVACMode
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.template import Template
+
+from .abstract_controller import AbstractController
 from .pid_controller import PIDController
 
 _LOGGER = logging.getLogger(__name__)
+
+PID_UPDATE_REASONS = {
+    REASON_CONTROLLER_TEMPLATE_ENTITY_CHANGED,
+    REASON_PID_CONTROL,
+    REASON_PRESET_CHANGED,
+    REASON_TEMPLATE_ENTITY_CHANGED,
+    REASON_THERMOSTAT_FIRST_RUN,
+    REASON_THERMOSTAT_HVAC_MODE_CHANGED,
+    REASON_THERMOSTAT_SENSOR_CHANGED,
+    REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
+    REASON_WINDOW_ENTITY_CHANGED,
+}
 
 
 class AbstractPidController(AbstractController, abc.ABC):
@@ -80,40 +102,13 @@ class AbstractPidController(AbstractController, abc.ABC):
     @property
     def pid_kp(self) -> float:
         """Returns Proportional Coefficient."""
-        if self._pid_kp_template is None:
-            _LOGGER.warning(
-                "%s - %s: pid_kp template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_PID_KP,
-            )
-            return float(DEFAULT_PID_KP)
-
-        try:
-            pid_kp = self._pid_kp_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render pid_kp template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._pid_kp_template,
-                DEFAULT_PID_KP,
-                e,
-            )
-            return float(DEFAULT_PID_KP)
-
-        try:
-            pid_kp = float(pid_kp)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert pid_kp template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                pid_kp,
-                DEFAULT_PID_KP,
-                e,
-            )
-            return float(DEFAULT_PID_KP)
+        pid_kp = render_float(
+            self._pid_kp_template,
+            DEFAULT_PID_KP,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_KP,
+            logger=_LOGGER,
+        )
 
         if self._mode == HVACMode.COOL:
             pid_kp *= -1
@@ -126,40 +121,13 @@ class AbstractPidController(AbstractController, abc.ABC):
     @property
     def pid_ki(self) -> float:
         """Returns Integral Coefficient."""
-        if self._pid_ki_template is None:
-            _LOGGER.warning(
-                "%s - %s: pid_ki template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_PID_KI,
-            )
-            return float(DEFAULT_PID_KI)
-
-        try:
-            pid_ki = self._pid_ki_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render pid_ki template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._pid_ki_template,
-                DEFAULT_PID_KI,
-                e,
-            )
-            return float(DEFAULT_PID_KI)
-
-        try:
-            pid_ki = float(pid_ki)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert pid_ki template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                pid_ki,
-                DEFAULT_PID_KI,
-                e,
-            )
-            return float(DEFAULT_PID_KI)
+        pid_ki = render_float(
+            self._pid_ki_template,
+            DEFAULT_PID_KI,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_KI,
+            logger=_LOGGER,
+        )
 
         if self._mode == HVACMode.COOL:
             pid_ki *= -1
@@ -172,40 +140,13 @@ class AbstractPidController(AbstractController, abc.ABC):
     @property
     def pid_kd(self) -> float:
         """Returns Derivative Coefficient."""
-        if self._pid_kd_template is None:
-            _LOGGER.warning(
-                "%s - %s: pid_kd template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_PID_KD,
-            )
-            return float(DEFAULT_PID_KD)
-
-        try:
-            pid_kd = self._pid_kd_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render pid_kd template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._pid_kd_template,
-                DEFAULT_PID_KD,
-                e,
-            )
-            return float(DEFAULT_PID_KD)
-
-        try:
-            pid_kd = float(pid_kd)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert pid_kd template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                pid_kd,
-                DEFAULT_PID_KD,
-                e,
-            )
-            return float(DEFAULT_PID_KD)
+        pid_kd = render_float(
+            self._pid_kd_template,
+            DEFAULT_PID_KD,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_KD,
+            logger=_LOGGER,
+        )
 
         if self._mode == HVACMode.COOL:
             pid_kd *= -1
@@ -220,7 +161,7 @@ class AbstractPidController(AbstractController, abc.ABC):
         await super().async_added_to_hass(hass, attrs)
 
         if self._pid_sample_period:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s - %s: setting up PID regulator - static period mode (%s)",
                 self._thermostat.entity_id,
                 self.name,
@@ -232,7 +173,7 @@ class AbstractPidController(AbstractController, abc.ABC):
                 )
             )
         else:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s - %s: setting up PID regulator - dynamic period mode on sensor changes",
                 self._thermostat.entity_id,
                 self.name,
@@ -241,49 +182,31 @@ class AbstractPidController(AbstractController, abc.ABC):
     def get_used_template_entity_ids(self) -> list[str]:
         """Get template entitites to track state."""
         tracked_entities = super().get_used_template_entity_ids()
-
-        if self._pid_kp_template is not None:
-            try:
-                template_info: RenderInfo = self._pid_kp_template.async_render_to_info()
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get pid_kp template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._pid_kp_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
-        if self._pid_ki_template is not None:
-            try:
-                template_info: RenderInfo = self._pid_ki_template.async_render_to_info()
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get pid_ki template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._pid_ki_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
-        if self._pid_kd_template is not None:
-            try:
-                template_info: RenderInfo = self._pid_kd_template.async_render_to_info()
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get pid_kd template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._pid_kd_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        owner = f"{self._thermostat.entity_id} - {self.name}"
+        tracked_entities.extend(
+            get_template_entities(
+                self._pid_kp_template,
+                owner=owner,
+                field=CONF_PID_KP,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._pid_ki_template,
+                owner=owner,
+                field=CONF_PID_KI,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._pid_kd_template,
+                owner=owner,
+                field=CONF_PID_KD,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     @final
@@ -417,13 +340,15 @@ class AbstractPidController(AbstractController, abc.ABC):
 
             self._last_output_limits = output_limits
 
-        if reason == REASON_KEEP_ALIVE and self._last_output:
-            await self._apply_output(self._last_output)
-        elif reason in (
-            REASON_THERMOSTAT_SENSOR_CHANGED,
-            REASON_THERMOSTAT_TARGET_TEMP_CHANGED,
-            REASON_PID_CONTROL,
+        should_update_pid = force or reason in PID_UPDATE_REASONS
+
+        if (
+            reason == REASON_KEEP_ALIVE
+            and self._last_output is not None
+            and not should_update_pid
         ):
+            await self._apply_output(self._last_output)
+        elif should_update_pid:
             output = self._pid.update(cur_temp)
             if output is None:
                 _LOGGER.debug(
@@ -446,7 +371,9 @@ class AbstractPidController(AbstractController, abc.ABC):
 
             output = self._adapt_pid_output(output)
             output = self._round_to_target_precision(output)
-            current_output = self._round_to_target_precision(self._get_current_output())
+            current_output = self._get_current_output()
+            if current_output is not None:
+                current_output = self._round_to_target_precision(current_output)
 
             if current_output != output:
                 _LOGGER.debug(

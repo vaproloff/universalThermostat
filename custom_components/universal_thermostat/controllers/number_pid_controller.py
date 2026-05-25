@@ -5,6 +5,18 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from custom_components.universal_thermostat.const import (
+    CONF_PID_MAX,
+    CONF_PID_MIN,
+    REASON_KEEP_ALIVE,
+    REASON_THERMOSTAT_NOT_RUNNING,
+    REASON_THERMOSTAT_STOP,
+)
+from custom_components.universal_thermostat.template_utils import (
+    get_template_entities,
+    render_float,
+)
+
 from homeassistant.components.climate import HVACMode
 from homeassistant.components.input_number import (
     ATTR_MAX,
@@ -20,18 +32,10 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN, State, split_entity_id
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.template import RenderInfo, Template
+from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, State, split_entity_id
+from homeassistant.helpers.template import Template
 
-from ..const import (
-    CONF_PID_MAX,
-    CONF_PID_MIN,
-    REASON_KEEP_ALIVE,
-    REASON_THERMOSTAT_NOT_RUNNING,
-    REASON_THERMOSTAT_STOP,
-)
-from . import AbstractPidController
+from .abstract_pid_controller import AbstractPidController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,40 +94,13 @@ class NumberPidController(AbstractPidController):
     @property
     def _min_output(self) -> float | None:
         """Returns PID Output minimum value."""
-        if self._min_output_template is None:
-            _LOGGER.warning(
-                "%s - %s: min_output template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._default_min_output,
-            )
-            return self._default_min_output
-
-        try:
-            min_output = self._min_output_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render min_output template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._min_output_template,
-                self._default_min_output,
-                e,
-            )
-            return self._default_min_output
-
-        try:
-            min_output = float(min_output)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert min_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                min_output,
-                self._default_min_output,
-                e,
-            )
-            return self._default_min_output
+        min_output = render_float(
+            self._min_output_template,
+            self._default_min_output,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_MIN,
+            logger=_LOGGER,
+        )
 
         return max(min_output, self._default_min_output)
 
@@ -134,7 +111,7 @@ class NumberPidController(AbstractPidController):
         if state:
             try:
                 return float(state.attributes.get(ATTR_MIN))
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity minimum value to float: %s. Error: %s",
                     self._thermostat.entity_id,
@@ -153,40 +130,13 @@ class NumberPidController(AbstractPidController):
 
     @property
     def _max_output(self) -> float | None:
-        if self._max_output_template is None:
-            _LOGGER.warning(
-                "%s - %s: max_output template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._default_max_output,
-            )
-            return self._default_max_output
-
-        try:
-            max_output = self._max_output_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render max_output template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._max_output_template,
-                self._default_max_output,
-                e,
-            )
-            return self._default_max_output
-
-        try:
-            max_output = float(max_output)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert max_output template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                max_output,
-                self._default_max_output,
-                e,
-            )
-            return self._default_max_output
+        max_output = render_float(
+            self._max_output_template,
+            self._default_max_output,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_PID_MAX,
+            logger=_LOGGER,
+        )
 
         return min(max_output, self._default_max_output)
 
@@ -197,7 +147,7 @@ class NumberPidController(AbstractPidController):
         if state:
             try:
                 return float(state.attributes.get(ATTR_MAX))
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert target entity maximum value to float: %s. Error: %s",
                     self._thermostat.entity_id,
@@ -217,7 +167,7 @@ class NumberPidController(AbstractPidController):
     @property
     def _is_on(self) -> bool:
         if self._switch_entity_id is None:
-            return self.__running
+            return self.running
         return self._hass.states.is_state(
             self._switch_entity_id, STATE_ON if not self._switch_inverted else STATE_OFF
         )
@@ -232,39 +182,23 @@ class NumberPidController(AbstractPidController):
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-
-        if self._min_output_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._min_output_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get output_min template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._min_output_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
-        if self._max_output_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._max_output_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get output_max template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._max_output_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        owner = f"{self._thermostat.entity_id} - {self.name}"
+        tracked_entities.extend(
+            get_template_entities(
+                self._min_output_template,
+                owner=owner,
+                field=CONF_PID_MIN,
+                logger=_LOGGER,
+            )
+        )
+        tracked_entities.extend(
+            get_template_entities(
+                self._max_output_template,
+                owner=owner,
+                field=CONF_PID_MAX,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     def _adapt_pid_output(self, value: float) -> float:
@@ -278,7 +212,7 @@ class NumberPidController(AbstractPidController):
             if step:
                 try:
                     step = float(step)
-                except ValueError as e:
+                except (TypeError, ValueError) as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert number step value to float: %s. Return default: %s. Error: %s",
                         self._thermostat.entity_id,
@@ -297,7 +231,7 @@ class NumberPidController(AbstractPidController):
         if state:
             try:
                 return float(state.state)
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 _LOGGER.warning(
                     "%s - %s: unable to convert number value to float: %s. Error: %s",
                     self._thermostat.entity_id,
@@ -305,6 +239,7 @@ class NumberPidController(AbstractPidController):
                     state.state,
                     e,
                 )
+        return None
 
     async def _async_turn_on(self, reason=None):
         if self._switch_entity_id is None:
@@ -321,7 +256,7 @@ class NumberPidController(AbstractPidController):
         service = SERVICE_TURN_ON if not self._switch_inverted else SERVICE_TURN_OFF
         service_data = {ATTR_ENTITY_ID: self._switch_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,
@@ -340,10 +275,10 @@ class NumberPidController(AbstractPidController):
             reason,
         )
 
-        service = SERVICE_TURN_OFF if not self._inverted else SERVICE_TURN_ON
+        service = SERVICE_TURN_OFF if not self._switch_inverted else SERVICE_TURN_ON
         service_data = {ATTR_ENTITY_ID: self._switch_entity_id}
         await self._hass.services.async_call(
-            domain=HA_DOMAIN,
+            domain=HOMEASSISTANT_DOMAIN,
             service=service,
             service_data=service_data,
             blocking=True,

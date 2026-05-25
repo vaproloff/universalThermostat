@@ -5,6 +5,12 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from custom_components.universal_thermostat.const import CONF_CLIMATE_TEMP_DELTA
+from custom_components.universal_thermostat.template_utils import (
+    get_template_entities,
+    render_float,
+)
+
 from homeassistant.components.climate import (
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
@@ -19,12 +25,10 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, SERVICE_TURN_OFF
 from homeassistant.core import State
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import condition
-from homeassistant.helpers.template import RenderInfo, Template
+from homeassistant.helpers.template import Template
 
-from ..const import CONF_CLIMATE_TEMP_DELTA, DEFAULT_CLIMATE_TEMP_DELTA
-from . import SwitchController
+from .switch_controller import SwitchController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,8 +68,9 @@ class ClimateSwitchController(SwitchController):
         """Return controller's extra attributes for thermostat entity."""
         attrs = super().extra_state_attributes or {}
 
-        if self._temp_delta != DEFAULT_CLIMATE_TEMP_DELTA:
-            attrs[CONF_CLIMATE_TEMP_DELTA] = self._temp_delta
+        temp_delta = self._temp_delta
+        if temp_delta is not None:
+            attrs[CONF_CLIMATE_TEMP_DELTA] = temp_delta
 
         return attrs
 
@@ -73,39 +78,15 @@ class ClimateSwitchController(SwitchController):
     def _temp_delta(self) -> float | None:
         """Returns Temperature Delta."""
         if self._temp_delta_template is None:
-            _LOGGER.warning(
-                "%s - %s: temp_delta template is none. Return default: %s",
-                self._thermostat.entity_id,
-                self.name,
-                DEFAULT_CLIMATE_TEMP_DELTA,
-            )
-            return float(DEFAULT_CLIMATE_TEMP_DELTA)
+            return None
 
-        try:
-            temp_delta = self._temp_delta_template.async_render(parse_result=False)
-        except (TemplateError, TypeError) as e:
-            _LOGGER.warning(
-                "%s - %s: unable to render temp_delta template: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._temp_delta_template,
-                DEFAULT_CLIMATE_TEMP_DELTA,
-                e,
-            )
-            return float(DEFAULT_CLIMATE_TEMP_DELTA)
-
-        try:
-            return float(temp_delta)
-        except ValueError as e:
-            _LOGGER.warning(
-                "%s - %s: unable to convert temp_delta template value to float: %s. Return default: %s. Error: %s",
-                self._thermostat.entity_id,
-                self.name,
-                self._temp_delta_template,
-                DEFAULT_CLIMATE_TEMP_DELTA,
-                e,
-            )
-            return float(DEFAULT_CLIMATE_TEMP_DELTA)
+        return render_float(
+            self._temp_delta_template,
+            0.0,
+            owner=f"{self._thermostat.entity_id} - {self.name}",
+            field=CONF_CLIMATE_TEMP_DELTA,
+            logger=_LOGGER,
+        )
 
     @property
     def _is_on(self) -> bool:
@@ -115,6 +96,7 @@ class ClimateSwitchController(SwitchController):
             return self._hass.states.is_state(self._target_entity_id, HVACMode.HEAT)
         if self._mode == HVACMode.HEAT:
             return self._hass.states.is_state(self._target_entity_id, HVACMode.COOL)
+        return None
 
     @property
     def is_active(self) -> bool:
@@ -138,6 +120,7 @@ class ClimateSwitchController(SwitchController):
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
             return state.attributes.get(ATTR_MIN_TEMP)
+        return None
 
     @property
     def _target_entity_max_temp(self) -> float:
@@ -145,27 +128,19 @@ class ClimateSwitchController(SwitchController):
         state: State = self._hass.states.get(self._target_entity_id)
         if state:
             return state.attributes.get(ATTR_MAX_TEMP)
+        return None
 
     def get_used_template_entity_ids(self) -> list[str]:
         """Add used template entities to track state change."""
         tracked_entities = super().get_used_template_entity_ids()
-
-        if self._temp_delta_template is not None:
-            try:
-                template_info: RenderInfo = (
-                    self._temp_delta_template.async_render_to_info()
-                )
-            except (TemplateError, TypeError) as e:
-                _LOGGER.warning(
-                    "%s - %s: unable to get temp_delta template info: %s. Error: %s",
-                    self._thermostat.entity_id,
-                    self.name,
-                    self._temp_delta_template,
-                    e,
-                )
-            else:
-                tracked_entities.extend(template_info.entities)
-
+        tracked_entities.extend(
+            get_template_entities(
+                self._temp_delta_template,
+                owner=f"{self._thermostat.entity_id} - {self.name}",
+                field=CONF_CLIMATE_TEMP_DELTA,
+                logger=_LOGGER,
+            )
+        )
         return tracked_entities
 
     async def _async_turn_on(self, reason):
@@ -177,16 +152,14 @@ class ClimateSwitchController(SwitchController):
             reason,
         )
 
-        await self._async_set_temperature(
-            target_temp=self._thermostat.get_ctrl_target_temperature(self.mode),
-            reason=reason,
-        )
+        if self._temp_delta is not None:
+            await self._async_set_temperature(
+                target_temp=self._thermostat.get_ctrl_target_temperature(self.mode),
+                reason=reason,
+            )
 
-        if (
-            self._mode == HVACMode.COOL
-            and not self._inverted
-            or self._mode == HVACMode.HEAT
-            and self._inverted
+        if (self._mode == HVACMode.COOL and not self._inverted) or (
+            self._mode == HVACMode.HEAT and self._inverted
         ):
             hvac_mode = HVACMode.COOL
         else:
@@ -229,7 +202,7 @@ class ClimateSwitchController(SwitchController):
             if step:
                 try:
                     step = float(step)
-                except ValueError as e:
+                except (TypeError, ValueError) as e:
                     _LOGGER.warning(
                         "%s - %s: unable to convert climate temp_step value to float: %s. Return default: %s. Error: %s",
                         self._thermostat.entity_id,
@@ -259,14 +232,18 @@ class ClimateSwitchController(SwitchController):
             reason,
         )
 
-        if self._is_on:
+        if self._is_on and self._temp_delta is not None:
             await self._async_set_temperature(target_temp=target_temp, reason=reason)
 
     async def _async_set_temperature(self, target_temp: float, reason):
+        temp_delta = self._temp_delta
+        if temp_delta is None:
+            return
+
         if self.mode == HVACMode.COOL:
-            target_temp -= self._temp_delta
+            target_temp -= temp_delta
         else:
-            target_temp += self._temp_delta
+            target_temp += temp_delta
 
         if None not in (self._target_entity_min_temp, self._target_entity_max_temp):
             target_temp = min(
@@ -295,8 +272,8 @@ class ClimateSwitchController(SwitchController):
             "%s - %s: changing target_temp for %s to %s (%s)",
             self._thermostat.entity_id,
             self.name,
-            target_temp,
             self._target_entity_id,
+            target_temp,
             reason,
         )
 

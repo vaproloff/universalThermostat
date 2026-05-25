@@ -7,6 +7,7 @@ ATTR_TIMEOUT = "timeout"
 
 CONF_AUTO_COOL_DELTA = "auto_cool_delta"
 CONF_AUTO_HEAT_DELTA = "auto_heat_delta"
+CONF_AUTO_MODE_DISABLED = "auto_mode_disabled"
 CONF_CLIMATE_TEMP_DELTA = "target_temp_delta"
 CONF_COLD_TOLERANCE = "cold_tolerance"
 CONF_COOLER = "cooler"
@@ -47,7 +48,6 @@ CONF_WINDOWS = "windows"
 
 DEFAULT_AUTO_COOL_DELTA = 1.0
 DEFAULT_AUTO_HEAT_DELTA = 1.0
-DEFAULT_CLIMATE_TEMP_DELTA = 0.0
 DEFAULT_COLD_TOLERANCE = 0.3
 DEFAULT_HOT_TOLERANCE = 0.3
 DEFAULT_NAME = "Universal Thermostat"
@@ -62,6 +62,9 @@ PRESET_NONE_HVAC_MODE = "saved_hvac_mode"
 PRESET_NONE_TARGET_TEMP = "saved_target_temp"
 PRESET_NONE_TARGET_TEMP_LOW = "saved_target_temp_low"
 PRESET_NONE_TARGET_TEMP_HIGH = "saved_target_temp_high"
+PRESET_TYPE_TEMP_DELTA = "temp_delta"
+PRESET_TYPE_HEAT_COOL_DELTAS = "heat_cool_deltas"
+PRESET_TYPE_TARGET_TEMPS = "target_temps"
 
 PWM_SWITCH_ATTR_LAST_CONTROL_STATE = "last_control_state"
 PWM_SWITCH_ATTR_LAST_CONTROL_TIME = "last_control_time"
@@ -82,3 +85,9 @@ REASON_THERMOSTAT_SENSOR_CHANGED = "sensor_changed"
 REASON_THERMOSTAT_STOP = "stop"
 REASON_THERMOSTAT_TARGET_TEMP_CHANGED = "target_temp_changed"
 REASON_WINDOW_ENTITY_CHANGED = "window_entity_changed"
+
+CTRL_CFG_SWITCH = "switch"
+CTRL_CFG_PWM_SWITCH = "pwm_switch"
+CTRL_CFG_CLIMATE_SWITCH = "climate_switch"
+CTRL_CFG_CLIMATE_PID = "climate_pid"
+CTRL_CFG_NUMBER_PID = "number_pid"
