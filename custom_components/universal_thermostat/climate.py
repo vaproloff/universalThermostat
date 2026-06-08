@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
+from datetime import datetime
 import logging
 import math
 from typing import Any
@@ -1281,7 +1282,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         else:
             await self._async_window_delayed_control()
 
-    async def _async_window_delayed_control(self) -> None:
+    async def _async_window_delayed_control(self, _now: datetime | None = None) -> None:
         _LOGGER.debug("%s: running delayed window control", self.entity_id)
         await self._async_control(reason=REASON_WINDOW_ENTITY_CHANGED)
         self.async_write_ha_state()

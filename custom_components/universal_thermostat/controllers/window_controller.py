@@ -106,7 +106,7 @@ class WindowController:
                     self._windows.append(
                         Window(
                             entity_id=window.get(ATTR_ENTITY_ID),
-                            timeout=window.get(ATTR_TIMEOUT),
+                            timeout=_cv_time_period(window.get(ATTR_TIMEOUT, None)),
                             inverted=window.get(CONF_INVERTED, False),
                         )
                     )
@@ -177,3 +177,10 @@ class WindowController:
             if entity_id == window.entity_id:
                 return window
         return None
+
+
+def _cv_time_period(value: Any) -> Any:
+    """Convert a config flow duration dict to a time period."""
+    if value is None:
+        return None
+    return cv.positive_time_period(value)
