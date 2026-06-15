@@ -989,6 +989,18 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
             )
             return
 
+        # While off, a preset is only remembered as a label and is not applied
+        # to the target temperatures. It is reset to None on the next turn-on.
+        if self._hvac_mode == HVACMode.OFF:
+            _LOGGER.debug(
+                "%s: thermostat is off, storing preset %s without applying it",
+                self.entity_id,
+                preset_mode,
+            )
+            self._preset_ctrl.set_preset(preset_mode)
+            self.async_write_ha_state()
+            return
+
         if self._preset_ctrl.preset_mode == PRESET_NONE:
             self._saved_preset_state = self._preset_ctrl.get_saved(
                 self._hvac_mode,
