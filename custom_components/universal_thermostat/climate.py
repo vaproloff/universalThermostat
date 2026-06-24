@@ -244,6 +244,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
         self._window_ctrl = window_controller
         self._preset_ctrl = preset_controller
         self._saved_preset_state = None
+        self._startup_completed = False
 
         if object_id:
             self.entity_id = async_generate_entity_id(
@@ -568,6 +569,7 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_first_run(self):
         """Will called one time. Need on hot reload when HA core is running."""
+        self._startup_completed = True
         await self._async_control(reason=REASON_THERMOSTAT_FIRST_RUN)
         self.async_write_ha_state()
 
@@ -1380,6 +1382,14 @@ class UniversalThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_control(self, time=None, force=False, reason=None) -> None:
         """Call controllers."""
+        if not self._startup_completed and reason != REASON_THERMOSTAT_FIRST_RUN:
+            _LOGGER.debug(
+                "%s: skipping control (%s); thermostat startup not completed yet",
+                self.entity_id,
+                reason,
+            )
+            return
+
         async with self._temp_lock:
             if self._last_async_control_hvac_mode != self._hvac_mode:
                 _LOGGER.debug(

@@ -6,7 +6,13 @@ from typing import Any
 from custom_components.universal_thermostat.const import ATTR_TIMEOUT, CONF_INVERTED
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import condition, config_validation as cv
@@ -116,6 +122,19 @@ class WindowController:
         """Return a list of window entities."""
         return [window.entity_id for window in self._windows]
 
+    def _is_window_state_known(self, window: Window) -> bool:
+        """Return whether the window entity currently has a usable state.
+
+        Right after a Home Assistant restart the entity may still be
+        `unknown`/`unavailable`; in that case we must not treat it as opened
+        (which would needlessly stop the controllers).
+        """
+        state = self._hass.states.get(window.entity_id)
+        return state is not None and state.state not in (
+            STATE_UNAVAILABLE,
+            STATE_UNKNOWN,
+        )
+
     def _is_window_opened(self, window: Window) -> bool:
         """Return if a window is currently open, ignoring delays."""
         return self._hass.states.is_state(
@@ -131,6 +150,9 @@ class WindowController:
     def is_safe_opened(self) -> bool:
         """If any of windows is opened."""
         for window in self._windows:
+            if not self._is_window_state_known(window):
+                continue
+
             is_now_opened = self._is_window_opened(window)
             timeout = window.timeout
 
