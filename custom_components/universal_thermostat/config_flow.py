@@ -1,6 +1,7 @@
 """Config flow for the Universal Thermostat integration."""
 
-from typing import Any
+from enum import Enum
+from typing import Any, Self
 
 import voluptuous as vol
 
@@ -88,6 +89,24 @@ from .const import (
 )
 
 CLEAR_FIELD_PREFIX = "clear_"
+
+
+class TargetTempStepOption(Enum):
+    """Target temperature step values exposed through the options selector."""
+
+    TENTHS = PRECISION_TENTHS
+    HALVES = PRECISION_HALVES
+    WHOLE = PRECISION_WHOLE
+
+    @property
+    def selector_value(self) -> str:
+        """Return the string value required by the Home Assistant selector."""
+        return str(self.value)
+
+    @classmethod
+    def from_selector_value(cls, value: str) -> Self:
+        """Create an option from a selector value while preserving HA precision values."""
+        return cls(float(value))
 
 
 class UniversalThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -292,7 +311,12 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                 self._draft[CONF_AUTO_HEAT_DELTA] = user_input.get(
                     CONF_AUTO_HEAT_DELTA, DEFAULT_AUTO_HEAT_DELTA
                 )
-                self._draft[CONF_TEMP_STEP] = user_input.get(CONF_TEMP_STEP)
+                temp_step = user_input.get(CONF_TEMP_STEP)
+                self._draft[CONF_TEMP_STEP] = (
+                    TargetTempStepOption.from_selector_value(temp_step).value
+                    if temp_step is not None
+                    else None
+                )
 
                 return await self.async_step_init()
 
@@ -332,15 +356,18 @@ class UniversalThermostatOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Optional(
                         CONF_TEMP_STEP,
-                        default=self._draft[CONF_TEMP_STEP],
+                        default=(
+                            str(self._draft[CONF_TEMP_STEP])
+                            if self._draft[CONF_TEMP_STEP] is not None
+                            else None
+                        ),
                     ): vol.Any(
                         None,
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
                                 options=[
-                                    {"value": str(PRECISION_TENTHS), "label": "0.1"},
-                                    {"value": str(PRECISION_HALVES), "label": "0.5"},
-                                    {"value": str(PRECISION_WHOLE), "label": "1"},
+                                    option.selector_value
+                                    for option in TargetTempStepOption
                                 ],
                                 mode=selector.SelectSelectorMode.DROPDOWN,
                             )
