@@ -3,7 +3,7 @@
 [![HACS validation](https://github.com/vaproloff/universalThermostat/actions/workflows/hacs.yaml/badge.svg)](https://github.com/vaproloff/universalThermostat/actions/workflows/hacs.yaml)
 [![Hassfest](https://github.com/vaproloff/universalThermostat/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/vaproloff/universalThermostat/actions/workflows/hassfest.yaml)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-blue)
-![Version](https://img.shields.io/badge/version-2026.5.2-blue)
+![Version](https://img.shields.io/badge/version-2026.5.3-blue)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
 [![GitHub stars](https://img.shields.io/github/stars/vaproloff/universalThermostat?style=social)](https://github.com/vaproloff/universalThermostat/stargazers)
 
