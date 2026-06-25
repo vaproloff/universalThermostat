@@ -15,5 +15,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/vaproloff/universalThermostat/issues",
   "requirements": [],
-  "version": "2026.5.3"
+  "version": "2026.5.4"
 }
